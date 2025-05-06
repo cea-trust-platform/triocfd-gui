@@ -57,9 +57,7 @@ def _(mo):
 def _(ds, mutation_signal):
     mutation_signal
 
-    current_scheme = str(type(ds.get("sch"))).removeprefix(
-        "<class 'trioapi.trustify_gen_pyd."
-    )[:-2]
+    current_scheme = type(ds.get("sch")).__name__
     current_scheme
     return (current_scheme,)
 
@@ -74,9 +72,7 @@ def _(mo):
 def _(mo, ta):
     list_of_scheme = ta.get_subclass("Schema_temps_base")
     for i in range(len(list_of_scheme)):
-        list_of_scheme[i] = str(list_of_scheme[i]).removeprefix(
-            "<class 'trioapi.trustify_gen_pyd."
-        )[:-2]
+        list_of_scheme[i] = list_of_scheme[i].__name__
     new_scheme = mo.ui.dropdown(list_of_scheme)
 
     return i, list_of_scheme, new_scheme
