@@ -1,0 +1,25 @@
+import ipyvuetify as v
+
+
+class StrWidget:
+    def __init__(self, initial_value):
+        """
+        Widget definition for Str Widget
+
+        ----------
+        Parameters
+
+        initial_value: str
+            The initial value of the str
+
+        This widget is composed by a text field
+
+        """
+
+        self.text_str = v.TextField(
+            v_model=initial_value,
+            outlined=True,
+            auto_grow=True,
+        )
+
+        self.content = v.Content(children=[self.text_str])
