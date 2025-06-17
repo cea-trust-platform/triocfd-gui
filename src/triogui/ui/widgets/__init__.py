@@ -8,6 +8,7 @@ from .float_widget import FloatWidget
 from .int_widget import IntWidget
 from .list_widget import ListWidget
 from .str_widget import StrWidget
+from .test import TestWidget
 
 __all__ = [
     "HomeWidget",
@@ -20,4 +21,5 @@ __all__ = [
     "IntWidget",
     "ListWidget",
     "StrWidget",
+    "TestWidget",
 ]

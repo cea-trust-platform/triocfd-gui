@@ -17,6 +17,7 @@ class StrWidget:
         """
 
         self.text_str = v.TextField(
+            label="Enter a caracter chain",
             v_model=initial_value,
             outlined=True,
             auto_grow=True,

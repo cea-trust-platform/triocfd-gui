@@ -9,7 +9,10 @@ class HomeWidget:
 
         This widget is composed by a dropdown to select the dataset we want to modify and a button to validate the choice.
         """
-        dataset_list = [f[:-5] for f in os.listdir() if f.endswith(".data")]
+
+        dataset_list = [
+            f[:-5] for f in os.listdir() if f.endswith(".data")
+        ]  # Get list fo every datafile in the directory
         self.select = v.Select(
             items=dataset_list,
             label="Dataset",
