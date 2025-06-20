@@ -3,7 +3,9 @@ from .object import ObjectWidget
 
 
 class ListWidget:
-    def __init__(self, dict_type, value_list):
+    def __init__(
+        self, current_object, expected_type, read_object, key_path, change_list
+    ):
         """
         Widget definition for List Widget
 
@@ -20,59 +22,177 @@ class ListWidget:
         """
         self.container = v.Container(children=[])
 
-        self.dict_type = dict_type
-
+        self.current_object = current_object
+        self.expected_type = expected_type
+        self.read_object = read_object
+        self.key_path = key_path
+        self.change_list = change_list
         self.delete_buttons = []
-
-        for i in range(len(value_list)):
-            delete_button = v.Btn(children=["Delete this item"], color="red")
-            delete_button.kwargs = {"index": len(self.delete_buttons)}
-            delete_button.on_event("click", self.delete_item)
-            self.delete_buttons.append(delete_button)
-            new_panel = v.ExpansionPanel(
-                children=[
-                    v.ExpansionPanelHeader(children=[f"Item {i + 1}", delete_button]),
-                    v.ExpansionPanelContent(
-                        children=[ObjectWidget.show_widget(dict_type, value_list[i])]
-                    ),
-                ]
-            )
-            self.container.children.append(new_panel)
+        self.duplicate_buttons = []
 
         self.add_button = v.Btn(children=["Add a new item"])
         self.expand_panel = v.ExpansionPanels(children=[self.container])
 
         self.content = v.Content(children=[self.expand_panel, self.add_button])
-        self.add_button.on_event("click", self.display_widget)
 
-    def display_widget(self, widget, event, data):
+        self.build_panels(self.current_object)
+
+    def add_item(self):
         current_container = self.container.children
-        delete_button = v.Btn(children=["Delete this item"], color="red")
+        delete_button = v.Btn(
+            icon=True,
+            small=True,
+            color="red",
+            children=[v.Icon(children=["mdi-delete"])],
+        )
         delete_button.kwargs = {"index": len(self.delete_buttons)}
         delete_button.on_event("click", self.delete_item)
         self.delete_buttons.append(delete_button)
+        duplicate_button = v.Btn(
+            icon=True,
+            small=True,
+            color="blue",
+            children=[v.Icon(children=["mdi-content-copy"])],
+        )
+        duplicate_button.kwargs = {"index": len(self.duplicate_buttons)}
+        self.duplicate_buttons.append(duplicate_button)
         new_panel = v.ExpansionPanel(
             children=[
                 v.ExpansionPanelHeader(
                     children=[
-                        f"New Item {delete_button.kwargs['index'] + 1}",
-                        delete_button,
+                        v.Row(
+                            children=[
+                                v.Col(children=["New item"], cols=10),
+                                v.Col(children=[duplicate_button], cols=1),
+                                v.Col(children=[delete_button], cols=1),
+                            ]
+                        )
                     ]
                 ),
                 v.ExpansionPanelContent(
-                    children=[ObjectWidget.show_widget(self.dict_type, None)]
+                    children=[
+                        ObjectWidget.show_widget(
+                            self.expected_type(),
+                            (self.expected_type, False),
+                            self.read_object,
+                            self.key_path + [len(self.delete_buttons) - 1],
+                            self.change_list,
+                        )
+                    ]
                 ),
             ]
         )
         self.container.children = current_container + [new_panel]
 
-    def delete_item(self, widget, event, data):
+    def delete_item(self, index):
         current_container = self.container.children
-        del current_container[widget.kwargs["index"]]
-        del self.delete_buttons[widget.kwargs["index"]]
+        del current_container[index]
+        del self.delete_buttons[index]
         for i, value in enumerate(self.delete_buttons):
             value.kwargs = {"index": i}
         self.container.children = current_container + [
             v.ExpansionPanel()
         ]  # Obliger de faire ça pour forcer l'affichage à s'update
-        self.container.children.pop()  # Supprimer l'élément qu'on vient d'ajouter qui sert seulement à force l'affichage à s'update
+        self.container.children.pop()  # Supprimer l'élément qu'on vient d'ajouter qui sert seulement à forcer l'affichage à s'update
+
+    def duplicate_item(self, index):
+        current_container = self.container.children
+        delete_button = v.Btn(
+            icon=True,
+            small=True,
+            color="red",
+            children=[v.Icon(children=["mdi-delete"])],
+        )
+        delete_button.kwargs = {"index": len(self.delete_buttons)}
+        delete_button.on_event("click", self.delete_item)
+        self.delete_buttons.append(delete_button)
+        duplicate_button = v.Btn(
+            icon=True,
+            small=True,
+            color="blue",
+            children=[v.Icon(children=["mdi-content-copy"])],
+        )
+        duplicate_button.kwargs = {"index": len(self.duplicate_buttons)}
+        self.duplicate_buttons.append(duplicate_button)
+
+        new_panel = v.ExpansionPanel(
+            children=[
+                v.ExpansionPanelHeader(
+                    children=[
+                        v.Row(
+                            children=[
+                                v.Col(children=["New Item"], cols=8),
+                                v.Col(children=[duplicate_button], cols=2),
+                                v.Col(children=[delete_button], cols=2),
+                            ]
+                        )
+                    ]
+                ),
+                v.ExpansionPanelContent(
+                    children=[
+                        ObjectWidget.show_widget(
+                            self.current_object[index],
+                            (self.expected_type, False),
+                            self.read_object,
+                            self.key_path + [index],
+                            self.change_list,
+                        )
+                    ]
+                ),
+            ]
+        )
+        self.container.children = current_container + [new_panel]
+
+    def build_panels(self, object_to_display):
+        self.container.children = []
+        self.delete_buttons = []
+        self.duplicate_buttons = []
+        for i, item in enumerate(object_to_display):
+            current_container = self.container.children
+            delete_button = v.Btn(
+                icon=True,
+                small=True,
+                color="red",
+                children=[v.Icon(children=["mdi-delete"])],
+            )
+            delete_button.kwargs = {"index": i}
+            delete_button.on_event("click", self.delete_item)
+            self.delete_buttons.append(delete_button)
+
+            duplicate_button = v.Btn(
+                icon=True,
+                small=True,
+                color="blue",
+                children=[v.Icon(children=["mdi-content-copy"])],
+            )
+            duplicate_button.kwargs = {"index": i}
+            duplicate_button.on_event("click", self.duplicate_item)
+            self.duplicate_buttons.append(duplicate_button)
+
+            new_panel = v.ExpansionPanel(
+                children=[
+                    v.ExpansionPanelHeader(
+                        children=[
+                            v.Row(
+                                children=[
+                                    v.Col(children=[f"Item {i + 1}"], cols=8),
+                                    v.Col(children=[duplicate_button], cols=2),
+                                    v.Col(children=[delete_button], cols=2),
+                                ]
+                            )
+                        ]
+                    ),
+                    v.ExpansionPanelContent(
+                        children=[
+                            ObjectWidget.show_widget(
+                                item,
+                                (self.expected_type, False),
+                                self.read_object,
+                                self.key_path + [i],
+                                self.change_list,
+                            )
+                        ]
+                    ),
+                ]
+            )
+            self.container.children = current_container + [new_panel]

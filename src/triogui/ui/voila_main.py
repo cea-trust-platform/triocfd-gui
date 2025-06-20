@@ -12,7 +12,6 @@ def main():
         ta.get_jdd("upwind_simplified").get("pb"),
         [ta.get_jdd("upwind_simplified").get("pb")],
     )
-
     # Create tabs for menu
     tab_widgets = [hw, fw, ow]
     tab_titles = ["Home", "Final", "pb"]

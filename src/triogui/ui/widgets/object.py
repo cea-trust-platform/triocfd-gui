@@ -87,7 +87,7 @@ class ObjectWidget:
             # Call show_widget for each attributes
             panel_content.append(
                 ObjectWidget.show_widget(
-                    getattr(self.read_object, key),
+                    getattr(read_object, key),
                     ta.extract_true_type(value),
                     self.read_object,
                     [key],
@@ -145,8 +145,36 @@ class ObjectWidget:
         """
 
         # If the type of the current object is not a standard one (str, int, etc)
-        if hasattr(expected_type[0], "model_fields") and not expected_type[1]:
-            if current_object is not None:
+        if (
+            hasattr(expected_type[0], "model_fields")
+            and not expected_type[1]
+            and not isinstance(current_object, list)
+        ):
+            if expected_type[0].model_fields == {}:
+                from .select_widget import SelectWidget
+
+                current_path = key_path
+                selectw = SelectWidget(
+                    current_object, expected_type[0], read_object, key_path, change_list
+                )
+
+                def change_select(event, skip_append=False):
+                    if selectw.select.v_model is not None:
+                        # change the read object
+                        set_nested_attr(
+                            read_object,
+                            current_path,
+                            ta.trustify_gen_pyd.__dict__[selectw.select.v_model](),
+                        )
+                        if not skip_append:
+                            # update the list with a copy
+                            change_list.append(copy.deepcopy(read_object))
+
+                selectw.select.observe(change_select, "v_model")
+                change_select(None, skip_append=True)
+                return selectw.content
+
+            elif current_object is not None:
                 widget_list = []
                 for key, value in current_object.model_fields.items():
                     tooltip = v.Tooltip(
@@ -191,32 +219,10 @@ class ObjectWidget:
                             ]
                         )
                     )
+
                 return v.ExpansionPanels(children=widget_list)
 
             # current object has no attributes (it is a parent class) so we create a select widget to choose the inherited class
-            elif expected_type[0].model_fields == {}:
-                from .select_widget import SelectWidget
-
-                current_path = key_path
-                selectw = SelectWidget(
-                    expected_type[0], read_object, key_path, change_list
-                )
-
-                def change_select(event, skip_append=False):
-                    if selectw.select.v_model is not None:
-                        # change the read object
-                        set_nested_attr(
-                            read_object,
-                            current_path,
-                            ta.trustify_gen_pyd.__dict__[selectw.select.v_model](),
-                        )
-                        if not skip_append:
-                            # update the list with a copy
-                            change_list.append(copy.deepcopy(read_object))
-
-                selectw.select.observe(change_select, "v_model")
-                change_select(None, skip_append=True)
-                return selectw.content
 
             else:
                 widget_list = []
@@ -267,6 +273,56 @@ class ObjectWidget:
                     )
                 return v.ExpansionPanels(children=widget_list)
 
+        elif (
+            expected_type[1] or isinstance(current_object, list)
+        ) and current_object is not None:
+            from .list_widget import ListWidget
+
+            current_path = key_path
+            listw = ListWidget(
+                current_object, expected_type[0], read_object, key_path, change_list
+            )
+
+            def delete_list(widget, event, data):
+                current_object.pop(widget.kwargs["index"])
+                set_nested_attr(read_object, key_path, current_object)
+                change_list.append(copy.deepcopy(read_object))
+                listw.build_panels(current_object)
+                for btn in listw.delete_buttons:
+                    btn.on_event("click", delete_list)
+                for btn in listw.duplicate_buttons:
+                    btn.on_event("click", duplicate_list)
+
+            def add_list(widget, event, data):
+                current_object.append(expected_type[0]())
+                set_nested_attr(read_object, key_path, current_object)
+                change_list.append(copy.deepcopy(read_object))
+                listw.build_panels(current_object)
+                for btn in listw.delete_buttons:
+                    btn.on_event("click", delete_list)
+                for btn in listw.duplicate_buttons:
+                    btn.on_event("click", duplicate_list)
+
+            def duplicate_list(widget, event, data):
+                current_object.append(current_object[widget.kwargs["index"]])
+                set_nested_attr(read_object, key_path, current_object)
+                change_list.append(copy.deepcopy(read_object))
+                listw.build_panels(current_object)
+                for btn in listw.delete_buttons:
+                    btn.on_event("click", delete_list)
+                for btn in listw.duplicate_buttons:
+                    btn.on_event("click", duplicate_list)
+
+            for i in listw.delete_buttons:
+                i.on_event("click", delete_list)
+
+            for i in listw.duplicate_buttons:
+                i.on_event("click", duplicate_list)
+
+            listw.add_button.on_event("click", add_list)
+
+            return listw.content
+
         # For each type that has no attributes, check its type, create the corresponding widget using its class, and update both the read object and the change list
         elif expected_type[0] is str:
             strw = str_widget.StrWidget(current_object)
@@ -296,7 +352,9 @@ class ObjectWidget:
             floatw = float_widget.FloatWidget(current_object)
 
             def change_float(widget, event, data):
-                set_nested_attr(read_object, key_path, floatw.float_field.v_model)
+                set_nested_attr(
+                    read_object, key_path, float(floatw.float_field.v_model)
+                )
                 change_list.append(copy.deepcopy(read_object))
 
             floatw.float_field.on_event("blur", change_float)
@@ -318,7 +376,7 @@ class ObjectWidget:
             intw = int_widget.IntWidget(current_object)
 
             def change_int(widget, event, data):
-                set_nested_attr(read_object, key_path, intw.number_input.v_model)
+                set_nested_attr(read_object, key_path, int(intw.number_input.v_model))
                 change_list.append(copy.deepcopy(read_object))
 
             intw.number_input.on_event("blur", change_int)
