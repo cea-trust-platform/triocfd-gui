@@ -1,5 +1,4 @@
 import ipyvuetify as v
-import trioapi as ta
 
 
 class FinalWidget:
@@ -16,10 +15,3 @@ class FinalWidget:
 
         self.validate_button = v.Btn(children=["Validate"])
         self.main = [self.textfield, self.validate_button]
-        self.validate_button.on_event("click", self.create_jdd)
-
-    def create_jdd(self, widget, event, data):
-        """
-        Create a new datafile (named by the textfield) with the read object modified
-        """
-        ta.write_data(self.dataset, self.textfield.v_model)

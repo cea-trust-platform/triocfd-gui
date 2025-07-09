@@ -76,7 +76,7 @@ class SelectWidget:
             ]
         )
 
-        self.expand_panel = v.ExpansionPanels(children=[self.panel])
+        self.expand_panel = v.ExpansionPanels(children=[self.panel], multiple=True)
 
         # Content initialization
         self.select.observe(self.change_class, "v_model")

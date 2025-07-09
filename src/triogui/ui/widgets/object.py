@@ -76,7 +76,20 @@ class ObjectWidget:
                         ),
                     }
                 ],
-                children=[value.description],
+                children=[
+                    v.Html(
+                        tag="div",
+                        children=[
+                            v.Html(tag="div", children=["Description :"]),
+                            v.Html(tag="div", children=[f"{value.description}"]),
+                            v.Html(tag="div", children=["Synonyms :"]),
+                            *[
+                                v.Html(tag="div", children=[f"- {synonym}"])
+                                for synonym in read_object._synonyms[key]
+                            ],
+                        ],
+                    )
+                ],
             )
             header_content = v.Row(
                 children=[v.Html(tag="span", children=[key], class_="mr-2"), tooltip],
@@ -159,16 +172,15 @@ class ObjectWidget:
                 )
 
                 def change_select(event, skip_append=False):
-                    if selectw.select.v_model is not None:
+                    if not skip_append:
+                        # update the list with a copy
+                        change_list.insert(-1, copy.deepcopy(read_object))
                         # change the read object
                         set_nested_attr(
                             read_object,
                             current_path,
                             ta.trustify_gen_pyd.__dict__[selectw.select.v_model](),
                         )
-                        if not skip_append:
-                            # update the list with a copy
-                            change_list.append(copy.deepcopy(read_object))
 
                 selectw.select.observe(change_select, "v_model")
                 change_select(None, skip_append=True)
@@ -190,7 +202,22 @@ class ObjectWidget:
                                 ),
                             }
                         ],
-                        children=[value.description],
+                        children=[
+                            v.Html(
+                                tag="div",
+                                children=[
+                                    v.Html(tag="div", children=["Description :"]),
+                                    v.Html(
+                                        tag="div", children=[f"{value.description}"]
+                                    ),
+                                    v.Html(tag="div", children=["Synonyms :"]),
+                                    *[
+                                        v.Html(tag="div", children=[f"- {synonym}"])
+                                        for synonym in current_object._synonyms[key]
+                                    ],
+                                ],
+                            ),
+                        ],
                     )
                     header_content = v.Row(
                         children=[
@@ -225,53 +252,82 @@ class ObjectWidget:
             # current object has no attributes (it is a parent class) so we create a select widget to choose the inherited class
 
             else:
-                widget_list = []
-                # Initialize an object of the expected type to be able to modify it
-                new_object = expected_type[0]()
-                for key, value in new_object.model_fields.items():
-                    tooltip = v.Tooltip(
-                        bottom=True,
-                        v_slots=[
-                            {
-                                "name": "activator",
-                                "variable": "tooltip",
-                                "children": v.Icon(
-                                    children=["mdi-information-outline"],
-                                    color="blue",
-                                    v_on="tooltip.on",
-                                ),
-                            }
-                        ],
-                        children=[value.description],
-                    )
-                    header_content = v.Row(
-                        children=[
-                            v.Html(tag="span", children=[key], class_="mr-2"),
-                            tooltip,
-                        ],
-                        align="center",
-                        no_gutters=True,
-                    )
-                    # new widget list for the new object representing the expected type
-                    widget_list.append(
-                        v.ExpansionPanel(
+                panel = v.ExpansionPanels(children=[])
+                initialize = v.Btn(
+                    color="red",
+                    children=["Initialize"],
+                )
+
+                def initialize_object(widget, event, data):
+                    widget_list = []
+                    # Initialize an object of the expected type to be able to modify it
+                    new_object = expected_type[0]()
+                    for key, value in new_object.model_fields.items():
+                        tooltip = v.Tooltip(
+                            bottom=True,
+                            v_slots=[
+                                {
+                                    "name": "activator",
+                                    "variable": "tooltip",
+                                    "children": v.Icon(
+                                        children=["mdi-information-outline"],
+                                        color="blue",
+                                        v_on="tooltip.on",
+                                    ),
+                                }
+                            ],
                             children=[
-                                v.ExpansionPanelHeader(children=[header_content]),
-                                v.ExpansionPanelContent(
+                                v.Html(
+                                    tag="div",
                                     children=[
-                                        ObjectWidget.show_widget(
-                                            getattr(new_object, key),
-                                            ta.extract_true_type(value),
-                                            read_object,
-                                            key_path + [key],
-                                            change_list,
-                                        )
-                                    ]
+                                        v.Html(tag="div", children=["Description :"]),
+                                        v.Html(
+                                            tag="div", children=[f"{value.description}"]
+                                        ),
+                                        v.Html(tag="div", children=["Synonyms :"]),
+                                        *[
+                                            v.Html(tag="div", children=[f"- {synonym}"])
+                                            for synonym in new_object._synonyms[key]
+                                        ],
+                                    ],
                                 ),
-                            ]
+                            ],
                         )
-                    )
-                return v.ExpansionPanels(children=widget_list)
+                        header_content = v.Row(
+                            children=[
+                                v.Html(tag="span", children=[key], class_="mr-2"),
+                                tooltip,
+                            ],
+                            align="center",
+                            no_gutters=True,
+                        )
+                        # new widget list for the new object representing the expected type
+                        widget_list.append(
+                            v.ExpansionPanel(
+                                children=[
+                                    v.ExpansionPanelHeader(children=[header_content]),
+                                    v.ExpansionPanelContent(
+                                        children=[
+                                            ObjectWidget.show_widget(
+                                                getattr(new_object, key),
+                                                ta.extract_true_type(value),
+                                                read_object,
+                                                key_path + [key],
+                                                change_list,
+                                            )
+                                        ]
+                                    ),
+                                ]
+                            )
+                        )
+                    panel.children = widget_list
+                    change_list.insert(-1, copy.deepcopy(read_object))
+                    set_nested_attr(read_object, key_path, new_object)
+
+                initialize.on_event("click", initialize_object)
+
+                # Retourner le container avec le bouton et le panel
+                return v.Container(children=[initialize, panel])
 
         elif (
             expected_type[1] or isinstance(current_object, list)
@@ -285,8 +341,8 @@ class ObjectWidget:
 
             def delete_list(widget, event, data):
                 current_object.pop(widget.kwargs["index"])
+                change_list.insert(-1, copy.deepcopy(read_object))
                 set_nested_attr(read_object, key_path, current_object)
-                change_list.append(copy.deepcopy(read_object))
                 listw.build_panels(current_object)
                 for btn in listw.delete_buttons:
                     btn.on_event("click", delete_list)
@@ -295,8 +351,8 @@ class ObjectWidget:
 
             def add_list(widget, event, data):
                 current_object.append(expected_type[0]())
+                change_list.insert(-1, copy.deepcopy(read_object))
                 set_nested_attr(read_object, key_path, current_object)
-                change_list.append(copy.deepcopy(read_object))
                 listw.build_panels(current_object)
                 for btn in listw.delete_buttons:
                     btn.on_event("click", delete_list)
@@ -305,8 +361,8 @@ class ObjectWidget:
 
             def duplicate_list(widget, event, data):
                 current_object.append(current_object[widget.kwargs["index"]])
+                change_list.insert(-1, copy.deepcopy(read_object))
                 set_nested_attr(read_object, key_path, current_object)
-                change_list.append(copy.deepcopy(read_object))
                 listw.build_panels(current_object)
                 for btn in listw.delete_buttons:
                     btn.on_event("click", delete_list)
@@ -328,8 +384,8 @@ class ObjectWidget:
             strw = str_widget.StrWidget(current_object)
 
             def change_str(widget, event, data):
+                change_list.insert(-1, copy.deepcopy(read_object))
                 set_nested_attr(read_object, key_path, strw.text_str.v_model)
-                change_list.append(copy.deepcopy(read_object))
 
             strw.text_str.on_event("blur", change_str)
             return strw.content
@@ -340,9 +396,9 @@ class ObjectWidget:
             )
 
             def change_literal(event, skip_append=False):
-                set_nested_attr(read_object, key_path, dropdownw.dropdown.v_model)
                 if not skip_append:
-                    change_list.append(copy.deepcopy(read_object))
+                    change_list.insert(-1, copy.deepcopy(read_object))
+                set_nested_attr(read_object, key_path, dropdownw.dropdown.v_model)
 
             dropdownw.dropdown.observe(change_literal, "v_model")
             change_literal(None, skip_append=True)
@@ -352,10 +408,10 @@ class ObjectWidget:
             floatw = float_widget.FloatWidget(current_object)
 
             def change_float(widget, event, data):
+                change_list.insert(-1, copy.deepcopy(read_object))
                 set_nested_attr(
                     read_object, key_path, float(floatw.float_field.v_model)
                 )
-                change_list.append(copy.deepcopy(read_object))
 
             floatw.float_field.on_event("blur", change_float)
             return floatw.content
@@ -364,9 +420,9 @@ class ObjectWidget:
             boolw = bool_widget.BooleanWidget(current_object)
 
             def change_bool(event, skip_append=False):
-                set_nested_attr(read_object, key_path, boolw.switch.v_model)
                 if not skip_append:
-                    change_list.append(copy.deepcopy(read_object))
+                    change_list.insert(-1, copy.deepcopy(read_object))
+                set_nested_attr(read_object, key_path, boolw.switch.v_model)
 
             boolw.switch.observe(change_bool, "v_model")
             change_bool(None, skip_append=True)
@@ -376,8 +432,8 @@ class ObjectWidget:
             intw = int_widget.IntWidget(current_object)
 
             def change_int(widget, event, data):
+                change_list.insert(-1, copy.deepcopy(read_object))
                 set_nested_attr(read_object, key_path, int(intw.number_input.v_model))
-                change_list.append(copy.deepcopy(read_object))
 
             intw.number_input.on_event("blur", change_int)
             return intw.content
@@ -430,3 +486,55 @@ class ObjectWidget:
 
         else:
             return "not defined"
+
+    # def instantiate_new_obj(self):
+    #    widget_list = []
+    #            # Initialize an object of the expected type to be able to modify it
+    #            new_object = expected_type[0]()
+    #            for key, value in new_object.model_fields.items():
+    #                tooltip = v.Tooltip(
+    #                    bottom=True,
+    #                    v_slots=[
+    #                        {
+    #                            "name": "activator",
+    #                            "variable": "tooltip",
+    #                            "children": v.Icon(
+    #                                children=["mdi-information-outline"],
+    #                                color="blue",
+    #                                v_on="tooltip.on",
+    #                            ),
+    #                        }
+    #                    ],
+    #                    children=[value.description],
+    #                )
+    #                header_content = v.Row(
+    #                    children=[
+    #                        v.Html(tag="span", children=[key], class_="mr-2"),
+    #                        tooltip,
+    #                    ],
+    #                    align="center",
+    #                    no_gutters=True,
+    #                )
+    #                # new widget list for the new object representing the expected type
+    #                widget_list.append(
+    #                    v.ExpansionPanel(
+    #                        children=[
+    #                            v.ExpansionPanelHeader(children=[header_content]),
+    #                            v.ExpansionPanelContent(
+    #                                children=[
+    #                                    ObjectWidget.show_widget(
+    #                                        getattr(new_object, key),
+    #                                        ta.extract_true_type(value),
+    #                                        read_object,
+    #                                        key_path + [key],
+    #                                        change_list,
+    #                                    )
+    #                                ]
+    #                            ),
+    #                        ]
+    #                    )
+    #                )
+    #            return v.ExpansionPanels(children=widget_list)
+
+
+#

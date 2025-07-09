@@ -9,6 +9,8 @@ from .int_widget import IntWidget
 from .list_widget import ListWidget
 from .str_widget import StrWidget
 from .test import TestWidget
+from .start_from_zero import StartZeroWidget
+from .main_app import MainApp
 
 __all__ = [
     "HomeWidget",
@@ -22,4 +24,6 @@ __all__ = [
     "ListWidget",
     "StrWidget",
     "TestWidget",
+    "StartZeroWidget",
+    "MainApp",
 ]

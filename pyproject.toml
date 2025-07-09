@@ -9,8 +9,10 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "ipyfilechooser>=0.6.0",
     "ipyvuetify>=1.11.1",
     "jupyter>=1.1.1",
+    "pyperclip>=1.9.0",
     "trioapi",
     "voila>=0.5.8",
 ]

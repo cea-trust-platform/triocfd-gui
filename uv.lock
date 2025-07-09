@@ -353,6 +353,18 @@ wheels = [
 ]
 
 [[package]]
+name = "ipyfilechooser"
+version = "0.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ipywidgets" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/13/63/a0bfdda0cdf002421632734e203e4692d72dc4e71cd006f101c90f9ba6d3/ipyfilechooser-0.6.0.tar.gz", hash = "sha256:41df9e4395a924f8e1b78e2804dbe5066dc3fdc233fb07fecfcdc2a0c9a7d8d3", size = 12737 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/00/60/249e3444fcd9c833704741769981cd02fe2c7ce94126b1394e7a3b26e543/ipyfilechooser-0.6.0-py3-none-any.whl", hash = "sha256:4555c24b30b819c91dc0ae5e6f7e4cf8f90e5cca531a9209a1fe4deee288d5c5", size = 11039 },
+]
+
+[[package]]
 name = "ipykernel"
 version = "6.29.5"
 source = { registry = "https://pypi.org/simple" }
@@ -1118,6 +1130,12 @@ wheels = [
 ]
 
 [[package]]
+name = "pyperclip"
+version = "1.9.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/30/23/2f0a3efc4d6a32f3b63cdff36cd398d9701d26cda58e3ab97ac79fb5e60d/pyperclip-1.9.0.tar.gz", hash = "sha256:b7de0142ddc81bfc5c7507eea19da920b92252b548b96186caf94a5e2527d310", size = 20961 }
+
+[[package]]
 name = "python-dateutil"
 version = "2.9.0.post0"
 source = { registry = "https://pypi.org/simple" }
@@ -1440,7 +1458,7 @@ wheels = [
 
 [[package]]
 name = "trioapi"
-version = "0.1.11"
+version = "0.2.11"
 source = { directory = "../trioapi" }
 dependencies = [
     { name = "numpy" },
@@ -1471,16 +1489,20 @@ name = "triogui"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "ipyfilechooser" },
     { name = "ipyvuetify" },
     { name = "jupyter" },
+    { name = "pyperclip" },
     { name = "trioapi" },
     { name = "voila" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "ipyfilechooser", specifier = ">=0.6.0" },
     { name = "ipyvuetify", specifier = ">=1.11.1" },
     { name = "jupyter", specifier = ">=1.1.1" },
+    { name = "pyperclip", specifier = ">=1.9.0" },
     { name = "trioapi", directory = "../trioapi" },
     { name = "voila", specifier = ">=0.5.8" },
 ]
