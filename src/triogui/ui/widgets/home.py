@@ -68,7 +68,7 @@ class HomeWidget:
 
         # ----- DIMENSION -----
 
-        self.dim_widget = dimension_widget.DimensionWidget(2)
+        self.dim_widget = dimension_widget.DimensionWidget(2, self.dataset)
         self.dim_content_container = v.Container(children=self.dim_widget.content)
         self.dim_panel = v.ExpansionPanel(
             children=[
@@ -80,7 +80,7 @@ class HomeWidget:
 
         # ----- DOMAINS -----
 
-        self.dom_widget = domain_widget.DomainWidget([])
+        self.dom_widget = domain_widget.DomainWidget([], self.dataset)
         self.domain_content_container = v.Container(children=self.dom_widget.content)
         self.domains_panel = v.ExpansionPanel(
             children=[
@@ -92,7 +92,7 @@ class HomeWidget:
 
         # ----- MESH -----
 
-        self.mesh_widget = mesh_widget.MeshWidget([])
+        self.mesh_widget = mesh_widget.MeshWidget([], self.dataset)
         self.mesh_content_container = v.Container(children=self.mesh_widget.content)
 
         self.panels.append(
@@ -105,7 +105,7 @@ class HomeWidget:
         )
 
         # ----- PARTITION -----
-        self.partition_widget = partition_widget.PartitionWidget([])
+        self.partition_widget = partition_widget.PartitionWidget([], self.dataset)
         self.partition_content_container = v.Container(
             children=self.partition_widget.content
         )
@@ -123,7 +123,7 @@ class HomeWidget:
 
         # ----- SCATTER -----
 
-        self.scatter_widget = scatter_widget.ScatterWidget([])
+        self.scatter_widget = scatter_widget.ScatterWidget([], self.dataset)
         self.scatter_content_container = v.Container(
             children=self.scatter_widget.content
         )
@@ -139,7 +139,7 @@ class HomeWidget:
 
         # ----- MAILLER -----
 
-        self.mailler_widget = mailler_widget.MaillerWidget([])
+        self.mailler_widget = mailler_widget.MaillerWidget([], self.dataset)
         self.mailler_content_container = v.Container(
             children=self.mailler_widget.content
         )
@@ -154,7 +154,7 @@ class HomeWidget:
         )
 
         # ----- DISCRETIZATION -----
-        self.dis_widget = discretization_widget.DiscretizationWidget([])
+        self.dis_widget = discretization_widget.DiscretizationWidget([], self.dataset)
         self.dis_content_container = v.Container(children=self.dis_widget.content)
 
         self.panels.append(
@@ -318,23 +318,25 @@ class HomeWidget:
 
                 # Dim management
                 self.dim_widget = dimension_widget.DimensionWidget(
-                    ta.get_dimension(self.dataset)
+                    ta.get_dimension(self.dataset), self.dataset
                 )
                 self.dim_content_container.children = self.dim_widget.content
 
                 # Dom management
                 self.dom_widget = domain_widget.DomainWidget(
-                    ta.get_domain(self.dataset)
+                    ta.get_domain(self.dataset), self.dataset
                 )
                 self.domain_content_container.children = self.dom_widget.content
 
                 # Mesh management
-                self.mesh_widget = mesh_widget.MeshWidget(ta.get_mesh(self.dataset))
+                self.mesh_widget = mesh_widget.MeshWidget(
+                    ta.get_mesh(self.dataset), self.dataset
+                )
                 self.mesh_content_container.children = self.mesh_widget.content
 
                 # Partition
                 self.partition_widget = partition_widget.PartitionWidget(
-                    ta.get_partition(self.dataset)
+                    ta.get_partition(self.dataset), self.dataset
                 )
                 self.partition_content_container.children = (
                     self.partition_widget.content
@@ -342,19 +344,19 @@ class HomeWidget:
 
                 # Scatter
                 self.scatter_widget = scatter_widget.ScatterWidget(
-                    ta.get_scatter(self.dataset)
+                    ta.get_scatter(self.dataset), self.dataset
                 )
                 self.scatter_content_container.children = self.scatter_widget.content
 
                 # Maillage
                 self.mailler_widget = mailler_widget.MaillerWidget(
-                    ta.get_maillage(self.dataset)
+                    ta.get_maillage(self.dataset), self.dataset
                 )
                 self.mailler_content_container.children = self.mailler_widget.content
 
                 # Discretization
                 self.dis_widget = discretization_widget.DiscretizationWidget(
-                    ta.get_dis(self.dataset)
+                    ta.get_dis(self.dataset), self.dataset
                 )
                 self.dis_content_container.children = self.dis_widget.content
 

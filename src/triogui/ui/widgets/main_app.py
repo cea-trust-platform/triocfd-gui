@@ -148,15 +148,14 @@ class MainApp:
                     dataset, original_identifier, "obj", self.pb_list[index][1]
                 )
 
-        else:
-            if None not in self.pb_list[index]:
-                self.tab_titles.insert(index + 1, self.pb_list[index][0])
-                self.tab_widgets.insert(
-                    index + 1,
-                    ObjectWidget(self.pb_list[index][1], [self.pb_list[index][1]]),
-                )
+        elif None not in self.pb_list[index]:
+            self.tab_titles.insert(index + 1, self.pb_list[index][0])
+            self.tab_widgets.insert(
+                index + 1,
+                ObjectWidget(self.pb_list[index][1], [self.pb_list[index][1]]),
+            )
 
-                ta.add_object(dataset, self.pb_list[index][1], self.pb_list[index][0])
+            ta.add_object(dataset, self.pb_list[index][1], self.pb_list[index][0])
 
         self.tab.children = [v.Tab(children=[k]) for k in self.tab_titles]
 
@@ -177,15 +176,14 @@ class MainApp:
                 ta.change_read_object(
                     dataset, original_identifier, "obj", self.sch_list[index][1]
                 )
-        else:
-            if None not in self.sch_list[index]:
-                self.tab_titles.insert(tab_index + 1, self.sch_list[index][0])
-                self.tab_widgets.insert(
-                    tab_index + 1,
-                    ObjectWidget(self.sch_list[index][1], [self.sch_list[index][1]]),
-                )
+        elif None not in self.sch_list[index]:
+            self.tab_titles.insert(tab_index + 1, self.sch_list[index][0])
+            self.tab_widgets.insert(
+                tab_index + 1,
+                ObjectWidget(self.sch_list[index][1], [self.sch_list[index][1]]),
+            )
 
-                ta.add_object(dataset, self.sch_list[index][1], self.sch_list[index][0])
+            ta.add_object(dataset, self.sch_list[index][1], self.sch_list[index][0])
 
         self.tab.children = [v.Tab(children=[k]) for k in self.tab_titles]
 

@@ -4,7 +4,7 @@ from ..object import ObjectWidget
 
 
 class PartitionWidget:
-    def __init__(self, partition_list):
+    def __init__(self, partition_list, dataset):
         """
         Widget definition to manage list object for the dataset
 
@@ -18,6 +18,7 @@ class PartitionWidget:
         """
 
         self.partition_list = partition_list
+        self.dataset = dataset
 
         self.partition_panels = v.ExpansionPanels(
             v_model=[],
@@ -56,13 +57,19 @@ class PartitionWidget:
         self.content = [self.partition_container]
 
     def add_partition(self, widget, event, data):
+        new_partition = ta.trustify_gen_pyd.Partition()
+        ta.add_read_object(self.dataset, new_partition)
         new_panel = v.ExpansionPanel(
             children=[
                 v.ExpansionPanelHeader(children=["Partition"]),
                 v.ExpansionPanelContent(
                     children=[
                         ObjectWidget.show_widget(
-                            None, (ta.trustify_gen_pyd.Partition, False), None, [], []
+                            new_partition,
+                            (ta.trustify_gen_pyd.Partition, False),
+                            new_partition,
+                            [],
+                            [],
                         )
                     ]
                 ),
@@ -70,6 +77,7 @@ class PartitionWidget:
         )
 
         self.partition_panels.children = self.partition_panels.children + [new_panel]
+
         # def update_menu(change):
         #    if change:
         #        old_item = self.partition_list[index]

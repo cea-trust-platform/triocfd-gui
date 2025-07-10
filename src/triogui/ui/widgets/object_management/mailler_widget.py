@@ -4,7 +4,7 @@ from ..object import ObjectWidget
 
 
 class MaillerWidget:
-    def __init__(self, mailler_list):
+    def __init__(self, mailler_list, dataset):
         """
         Widget definition to manage list object for the dataset
 
@@ -18,6 +18,7 @@ class MaillerWidget:
         """
 
         self.mailler_list = mailler_list
+        self.dataset = dataset
 
         self.mailler_panels = v.ExpansionPanels(
             v_model=[],
@@ -54,13 +55,19 @@ class MaillerWidget:
         self.content = [self.mailler_container]
 
     def add_mailler(self, widget, event, data):
+        new_maille = ta.trustify_gen_pyd.Mailler()
+        ta.add_read_object(self.dataset, new_maille)
         new_panel = v.ExpansionPanel(
             children=[
                 v.ExpansionPanelHeader(children=["Mailler"]),
                 v.ExpansionPanelContent(
                     children=[
                         ObjectWidget.show_widget(
-                            None, (ta.trustify_gen_pyd.Mailler, False), None, [], []
+                            new_maille,
+                            (ta.trustify_gen_pyd.Mailler, False),
+                            new_maille,
+                            [],
+                            [],
                         )
                     ]
                 ),
@@ -68,16 +75,3 @@ class MaillerWidget:
         )
 
         self.mailler_panels.children = self.mailler_panels.children + [new_panel]
-        # def update_menu(change):
-        #    if change:
-        #        old_item = self.mailler_list[index]
-        #        already_created=(None not in old_item)
-        #        if change['owner'] is new_name_mailler:
-        #            self.mailler_list[index] = [change['new'], old_item[1]]
-        #            self.mailler_callback(index, 0, already_created)
-        #        else:
-        #            self.mailler_list[index] = [old_item[0], getattr(ta.trustify_gen_pyd,change['new'])()]
-        #            self.mailler_callback(index, 1, already_created)
-        # update_menu(None)
-        # new_name_mailler.observe(update_menu,"v_model")
-        # new_select_mailler.observe(update_menu,"v_model")

@@ -27,15 +27,6 @@ class ProblemWidget:
             children=[],
         )
 
-        self.select_pb = v.Select(
-            items=[
-                str(i.__name__)
-                for i in ta.get_subclass(ta.trustify_gen_pyd.Pb_base.__name__)
-            ],
-            label="Type of the problem",
-            v_model=None,
-        )
-
         self.btn_add_pb = v.Btn(children="Add a problem")
         self.btn_add_pb.on_event("click", self.add_pb)
         for i, pb in enumerate(self.pb_list):

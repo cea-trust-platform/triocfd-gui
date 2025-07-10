@@ -4,7 +4,7 @@ from ..object import ObjectWidget
 
 
 class MeshWidget:
-    def __init__(self, mesh_list):
+    def __init__(self, mesh_list, dataset):
         """
         Widget definition to manage list object for the dataset
 
@@ -18,7 +18,7 @@ class MeshWidget:
         """
 
         self.mesh_list = mesh_list
-
+        self.dataset = dataset
         self.mesh_panels = v.ExpansionPanels(
             v_model=[],
             multiple=True,
@@ -50,6 +50,9 @@ class MeshWidget:
         self.content = [self.mesh_container]
 
     def add_mesh(self, widget, event, data):
+        widget_index = len(self.mesh_list)
+
+        self.mesh_list.append(None)
         new_select_type_mesh = v.Select(
             items=["Read_med", "Read_file", "Read_file_bin", "Read_tgrid"],
             label="Type of the mesh",
@@ -66,27 +69,23 @@ class MeshWidget:
         )
 
         self.mesh_panels.children = self.mesh_panels.children + [new_panel]
-        # def update_menu(change):
-        #    if change:
-        #        old_item = self.mesh_list[index]
-        #        already_created=(None not in old_item)
-        #        if change['owner'] is new_name_mesh:
-        #            self.mesh_list[index] = [change['new'], old_item[1]]
-        #            self.mesh_callback(index, 0, already_created)
-        #        else:
-        #            self.mesh_list[index] = [old_item[0], getattr(ta.trustify_gen_pyd,change['new'])()]
-        #            self.mesh_callback(index, 1, already_created)
-        # update_menu(None)
-        # new_name_mesh.observe(update_menu,"v_model")
-        # new_select_mesh.observe(update_menu,"v_model")
 
         def change_class(change):
             if change:
+                old_value = self.mesh_list[widget_index]
+                self.mesh_list[widget_index] = ta.trustify_gen_pyd.__dict__[
+                    change["new"]
+                ]()
+                if old_value is None:
+                    ta.add_read_object(self.dataset, self.mesh_list[widget_index])
+                else:
+                    obj_index = ta.get_entry_index(self.dataset, old_value)
+                    self.dataset.entries[obj_index] = self.mesh_list[widget_index]
                 # Call show_widgets for the type selected (we instantiate the type and specify the tuple (type, is_list))
                 widgets = ObjectWidget.show_widget(
-                    ta.trustify_gen_pyd.__dict__[change["new"]](),
-                    (ta.trustify_gen_pyd.__dict__[change["new"]], False),
-                    ta.trustify_gen_pyd.__dict__[change["new"]](),
+                    self.mesh_list[widget_index],
+                    (type(self.mesh_list[widget_index]), False),
+                    self.mesh_list[widget_index],
                     [],
                     [],
                 )
