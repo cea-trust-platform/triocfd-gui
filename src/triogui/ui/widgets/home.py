@@ -103,7 +103,6 @@ class HomeWidget:
                 ]
             )
         )
-
         # ----- PARTITION -----
         self.partition_widget = partition_widget.PartitionWidget([], self.dataset)
         self.partition_content_container = v.Container(

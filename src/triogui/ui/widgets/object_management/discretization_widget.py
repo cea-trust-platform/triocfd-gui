@@ -25,19 +25,17 @@ class DiscretizationWidget:
             children=[],
         )
 
-        self.select_dis = v.Select(
-            items=[
-                str(i.__name__)
-                for i in ta.get_subclass(
-                    ta.trustify_gen_pyd.Discretisation_base.__name__
-                )
-            ],
-            label="Type of the discretization",
-            v_model=None,
-        )
-
         self.btn_add_dis = v.Btn(children="Add a discretization")
         self.btn_add_dis.on_event("click", self.add_dis)
+
+        self.rebuild_panels()
+
+        self.dis_container = v.Container(children=[self.dis_panels, self.btn_add_dis])
+
+        self.content = [self.dis_container]
+
+    def rebuild_panels(self):
+        self.dis_panels.children = []
         for i, dis in enumerate(self.dis_list):
             new_name_dis = v.TextField(
                 label="Name of the discretization",
@@ -52,12 +50,31 @@ class DiscretizationWidget:
                     )
                 ],
                 label="Type of the discretization",
-                v_model=dis[1].__name__,
+                v_model=dis[1].__name__ if dis[1] is not None else None,
+            )
+
+            btn_delete = v.Btn(
+                children=[v.Icon(children="mdi-delete")],
+                icon=True,
+                color="red",
+                small=True,
+            )
+            btn_delete.on_event(
+                "click", lambda widget, event, data, idx=i: self.delete_dis(idx)
+            )
+
+            header_content = v.Row(
+                children=[
+                    v.Col(children=["Discretization"], cols=10),
+                    v.Col(children=[btn_delete], cols=2, class_="text-right"),
+                ],
+                no_gutters=True,
+                align="center",
             )
 
             new_panel = v.ExpansionPanel(
                 children=[
-                    v.ExpansionPanelHeader(children=["Discretization"]),
+                    v.ExpansionPanelHeader(children=[header_content]),
                     v.ExpansionPanelContent(children=[new_name_dis, new_select_dis]),
                 ]
             )
@@ -76,10 +93,6 @@ class DiscretizationWidget:
                 ),
                 "v_model",
             )
-
-        self.dis_container = v.Container(children=[self.dis_panels, self.btn_add_dis])
-
-        self.content = [self.dis_container]
 
     def update_dataset(self, change, index, name_widget, select_widget):
         if change:
@@ -109,42 +122,13 @@ class DiscretizationWidget:
                     )
 
     def add_dis(self, widget, event, data):
-        index = len(self.dis_list)
         self.dis_list.append([None, None])
-        new_name_dis = v.TextField(
-            label="Name of the discretization",
-            outlined=True,
-            v_model=None,
-        )
-        new_select_dis = v.Select(
-            items=[
-                str(i.__name__)
-                for i in ta.get_subclass(
-                    ta.trustify_gen_pyd.Discretisation_base.__name__
-                )
-            ],
-            label="Type of the discretization",
-            v_model=None,
-        )
+        self.rebuild_panels()
 
-        new_panel = v.ExpansionPanel(
-            children=[
-                v.ExpansionPanelHeader(children=["Discretization"]),
-                v.ExpansionPanelContent(children=[new_name_dis, new_select_dis]),
-            ]
-        )
-        self.dis_panels.children = self.dis_panels.children + [new_panel]
+    def delete_dis(self, index):
+        if 0 <= index < len(self.dis_list):
+            if self.dis_list[index][0] in self.dataset._declarations:
+                ta.delete_declaration_object(self.dataset, self.dis_list[index][0])
+            del self.dis_list[index]
 
-        self.update_dataset(None, index, new_name_dis, new_select_dis)
-        new_name_dis.observe(
-            lambda change, idx=index, name=new_name_dis: self.update_dataset(
-                change, idx, name, new_select_dis
-            ),
-            "v_model",
-        )
-        new_select_dis.observe(
-            lambda change, idx=index, select=new_select_dis: self.update_dataset(
-                change, idx, new_name_dis, select
-            ),
-            "v_model",
-        )
+            self.rebuild_panels()
