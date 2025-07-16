@@ -1458,7 +1458,7 @@ wheels = [
 
 [[package]]
 name = "trioapi"
-version = "0.2.15"
+version = "0.2.18"
 source = { directory = "../trioapi" }
 dependencies = [
     { name = "numpy" },

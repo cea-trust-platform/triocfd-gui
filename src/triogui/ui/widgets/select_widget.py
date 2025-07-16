@@ -68,23 +68,13 @@ class SelectWidget:
                 )
             ]
 
-        # Display
-        self.panel = v.ExpansionPanel(
-            children=[
-                v.ExpansionPanelHeader(children=[]),
-                v.ExpansionPanelContent(children=[self.widget_container]),
-            ]
-        )
-
-        self.expand_panel = v.ExpansionPanels(children=[self.panel], multiple=True)
-
         # Content initialization
         self.select.observe(self.change_class, "v_model")
 
         # Initial call but skip first time
         self.change_class(None, skip=True)
 
-        self.content = v.Content(children=[self.select, self.expand_panel])
+        self.content = v.Content(children=[self.select, self.widget_container])
 
     def change_class(self, event, skip=False):
         """

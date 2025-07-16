@@ -33,6 +33,15 @@ def set_nested_attr(obj, attr_list, value):
             obj[attr_list[-1]] = value
 
 
+def get_nested_attr(obj, attr_list):
+    for attr in attr_list:
+        if isinstance(attr, str):
+            obj = getattr(obj, attr)
+        elif isinstance(attr, int):
+            obj = obj[attr]
+    return obj
+
+
 class ObjectWidget:
     def __init__(self, read_object, change_list):
         """
@@ -324,10 +333,10 @@ class ObjectWidget:
                     change_list.insert(-1, copy.deepcopy(read_object))
                     set_nested_attr(read_object, key_path, new_object)
 
+                panel.children = [initialize]
                 initialize.on_event("click", initialize_object)
 
-                # Retourner le container avec le bouton et le panel
-                return v.Container(children=[initialize, panel])
+                return v.Container(children=[panel])
 
         elif (
             expected_type[1] or isinstance(current_object, list)
@@ -340,30 +349,51 @@ class ObjectWidget:
             )
 
             def delete_list(widget, event, data):
-                current_object.pop(widget.kwargs["index"])
+                # Code to get the updated object in the global object which is the only one modified
+                updated_object = get_nested_attr(read_object, key_path)
+
+                index = widget.kwargs["index"]
+                updated_object.pop(index)
+
+                set_nested_attr(read_object, key_path, updated_object)
+
                 change_list.insert(-1, copy.deepcopy(read_object))
-                set_nested_attr(read_object, key_path, current_object)
-                listw.build_panels(current_object)
+
+                listw.build_panels(updated_object)
                 for btn in listw.delete_buttons:
                     btn.on_event("click", delete_list)
                 for btn in listw.duplicate_buttons:
                     btn.on_event("click", duplicate_list)
 
             def add_list(widget, event, data):
-                current_object.append(expected_type[0]())
+                # Code to get the updated object in the global object which is the only one modified
+                updated_object = get_nested_attr(read_object, key_path)
+
+                updated_object.append(copy.deepcopy(expected_type[0]()))
+
+                set_nested_attr(read_object, key_path, updated_object)
+
                 change_list.insert(-1, copy.deepcopy(read_object))
-                set_nested_attr(read_object, key_path, current_object)
-                listw.build_panels(current_object)
+
+                listw.build_panels(updated_object)
+
                 for btn in listw.delete_buttons:
                     btn.on_event("click", delete_list)
                 for btn in listw.duplicate_buttons:
                     btn.on_event("click", duplicate_list)
 
             def duplicate_list(widget, event, data):
-                current_object.append(current_object[widget.kwargs["index"]])
+                # Code to get the updated object in the global object which is the only one modified
+                updated_object = get_nested_attr(read_object, key_path)
+
+                index = widget.kwargs["index"]
+                updated_object.append(copy.deepcopy(updated_object[index]))
+
+                set_nested_attr(read_object, key_path, updated_object)
+
                 change_list.insert(-1, copy.deepcopy(read_object))
-                set_nested_attr(read_object, key_path, current_object)
-                listw.build_panels(current_object)
+
+                listw.build_panels(updated_object)
                 for btn in listw.delete_buttons:
                     btn.on_event("click", delete_list)
                 for btn in listw.duplicate_buttons:
@@ -398,7 +428,7 @@ class ObjectWidget:
             def change_literal(event, skip_append=False):
                 if not skip_append:
                     change_list.insert(-1, copy.deepcopy(read_object))
-                set_nested_attr(read_object, key_path, dropdownw.dropdown.v_model)
+                    set_nested_attr(read_object, key_path, dropdownw.dropdown.v_model)
 
             dropdownw.dropdown.observe(change_literal, "v_model")
             change_literal(None, skip_append=True)
@@ -422,7 +452,7 @@ class ObjectWidget:
             def change_bool(event, skip_append=False):
                 if not skip_append:
                     change_list.insert(-1, copy.deepcopy(read_object))
-                set_nested_attr(read_object, key_path, boolw.switch.v_model)
+                    set_nested_attr(read_object, key_path, boolw.switch.v_model)
 
             boolw.switch.observe(change_bool, "v_model")
             change_bool(None, skip_append=True)
@@ -438,103 +468,32 @@ class ObjectWidget:
             intw.number_input.on_event("blur", change_int)
             return intw.content
 
-        ##elif isinstance(widget_type, list) and current_value is not None:
-        ##    from .list_widget import ListWidget
-        ##    current_path=key_path
-        ##    listw=ListWidget(widget_type[0], current_value,read_object,key_path)
-        ##
-        ##    def delete_list(widget, event, data):
-        ##        obj=read_object
-        ##        for attr in current_path:
-        ##            if isinstance(attr,str):
-        ##                obj = getattr(obj, attr)
-        ##            elif isinstance(attr,int):
-        ##                obj=obj[attr]
-        ##        obj.pop(widget.kwargs['index'])
-        ##        listw.delete_item(widget.kwargs['index'])
+        elif current_object is None and expected_type[1]:
+            container = v.Container(children=[])
+            initialize = v.Btn(
+                color="red",
+                children=["Initialize"],
+            )
 
-        # for i,attr in enumerate(current_path):
-        #    if i==len(current_path)-1:
-        #        try:
-        #            new_class= get_args(get_args(get_args(read_object[attr].model_fields.annotation)[0])[0])[0]()
-        #        except TypeError:
-        #            print(read_object)
-        #            print(i)
-        #            print(current_path)
-        #            print(ta.get_successive_attributes(type(read_object)))
-        #    if isinstance(attr,str):
-        #        read_object = getattr(read_object, attr)
-        #    elif isinstance(attr,int):
-        #        read_object=read_object[attr]
-        # read_object+= [new_class]
-        #
-        # def add_list(widget, event, data):
-        #    obj=read_object
-        #    for i,attr in enumerate(current_path):
-        #        if i==len(current_path)-1:
-        #            new_class= get_args(get_args(get_args(obj[attr].model_fields.annotation)[0])[0])[0]()
-        #        if isinstance(attr,str):
-        #            obj = getattr(obj, attr)
-        #        elif isinstance(attr,int):
-        #            obj=obj[attr]
-        #    obj+= [new_class]
+            def initialize_object(widget, event, data):
+                # Initialize an object of the expected type to be able to modify it
+                new_object = expected_type[0]()
+                widget = ObjectWidget.show_widget(
+                    [new_object],
+                    expected_type,
+                    read_object,
+                    key_path,
+                    change_list,
+                )
 
-        # for i in listw.delete_buttons:
-        #    i.on_event("click", delete_list)
-        # listw.add_button.on_event("click",add_list)
-        # return listw.content
+                container.children = [widget]
+                change_list.insert(-1, copy.deepcopy(read_object))
+                set_nested_attr(read_object, key_path, [new_object])
+
+            container.children = [initialize]
+            initialize.on_event("click", initialize_object)
+
+            return container
 
         else:
-            return "not defined"
-
-    # def instantiate_new_obj(self):
-    #    widget_list = []
-    #            # Initialize an object of the expected type to be able to modify it
-    #            new_object = expected_type[0]()
-    #            for key, value in new_object.model_fields.items():
-    #                tooltip = v.Tooltip(
-    #                    bottom=True,
-    #                    v_slots=[
-    #                        {
-    #                            "name": "activator",
-    #                            "variable": "tooltip",
-    #                            "children": v.Icon(
-    #                                children=["mdi-information-outline"],
-    #                                color="blue",
-    #                                v_on="tooltip.on",
-    #                            ),
-    #                        }
-    #                    ],
-    #                    children=[value.description],
-    #                )
-    #                header_content = v.Row(
-    #                    children=[
-    #                        v.Html(tag="span", children=[key], class_="mr-2"),
-    #                        tooltip,
-    #                    ],
-    #                    align="center",
-    #                    no_gutters=True,
-    #                )
-    #                # new widget list for the new object representing the expected type
-    #                widget_list.append(
-    #                    v.ExpansionPanel(
-    #                        children=[
-    #                            v.ExpansionPanelHeader(children=[header_content]),
-    #                            v.ExpansionPanelContent(
-    #                                children=[
-    #                                    ObjectWidget.show_widget(
-    #                                        getattr(new_object, key),
-    #                                        ta.extract_true_type(value),
-    #                                        read_object,
-    #                                        key_path + [key],
-    #                                        change_list,
-    #                                    )
-    #                                ]
-    #                            ),
-    #                        ]
-    #                    )
-    #                )
-    #            return v.ExpansionPanels(children=widget_list)
-
-
-#
+            return f"{current_object} [[]]{expected_type}"

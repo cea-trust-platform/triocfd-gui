@@ -15,6 +15,9 @@ from .object_management import (
     scatter_widget,
     mailler_widget,
     mesh_widget,
+    solve_widget,
+    associate_widget,
+    discretize_widget,
 )
 
 
@@ -33,6 +36,7 @@ class HomeWidget:
         self.dataset = self.original_dataset
         self.pb_list = pb_list
         self.sch_list = sch_list
+        self.solve_list = ta.get_solved_problems(self.dataset)
         self.sch_callback = sch_callback
 
         # Get the package directory as a pathlib.Path object
@@ -59,6 +63,16 @@ class HomeWidget:
         self.copy_btn.on_event("click", self.copy_jdd)
 
         self.filefield = FileChooser(use_dir_icons=True, show_only_dirs=True)
+        self.file_name = v.TextField(
+            label="File name",
+            v_model=None,
+            outlined=True,
+            dense=True,
+            hide_details=True,
+            single_line=True,
+            style_="max-width: 250px;",
+            class_="mb-2",
+        )
 
         self.validate_button = v.Btn(children=["Validate"])
 
@@ -197,10 +211,58 @@ class HomeWidget:
 
         # ----- ASSOCIATION -----
 
+        self.associate_widget = associate_widget.AssociateWidget(
+            [], [], dataset=self.dataset
+        )
+        self.associate_content_container = v.Container(
+            children=self.associate_widget.content
+        )
+
+        self.panels.append(
+            v.ExpansionPanel(
+                children=[
+                    v.ExpansionPanelHeader(children=["Associations"]),
+                    v.ExpansionPanelContent(
+                        children=[self.associate_content_container]
+                    ),
+                ]
+            )
+        )
+
+        # ----- DISCRETIZE -----
+        self.discretize_widget = discretize_widget.DiscretizeWidget(
+            [], [], [], dataset=self.dataset
+        )
+        self.discretize_content_container = v.Container(
+            children=self.discretize_widget.content
+        )
+
+        self.panels.append(
+            v.ExpansionPanel(
+                children=[
+                    v.ExpansionPanelHeader(children=["Discretize"]),
+                    v.ExpansionPanelContent(
+                        children=[self.discretize_content_container]
+                    ),
+                ]
+            )
+        )
+
         # ----- SOLVE -----
 
-        # ----- VALIDATE -----
-        self.validate_btn = v.Btn(children="Create new dataset")
+        self.solve_widget = solve_widget.SolveWidget(
+            self.pb_list, self.solve_list, dataset=self.dataset
+        )
+        self.solve_content_container = v.Container(children=self.solve_widget.content)
+
+        self.panels.append(
+            v.ExpansionPanel(
+                children=[
+                    v.ExpansionPanelHeader(children=["Solves"]),
+                    v.ExpansionPanelContent(children=[self.solve_content_container]),
+                ]
+            )
+        )
 
         # ----- MAIN LAYOUT -----
         self.main = [
@@ -287,6 +349,7 @@ class HomeWidget:
                                                 children=["Select directory:"],
                                                 class_="text-subtitle-1 font-weight-medium mb-2",
                                             ),
+                                            self.file_name,
                                             self.filefield,
                                         ],
                                     ),
@@ -375,6 +438,39 @@ class HomeWidget:
                 )
                 self.sch_content_container.children = self.sch_widget.content
 
+                # Associate management
+
+                self.associate_widget = associate_widget.AssociateWidget(
+                    [pb[0] for pb in self.pb_list]
+                    + [sch[0] for sch in self.sch_list]
+                    + ta.get_domain(self.dataset),
+                    ta.get_associations(self.dataset),
+                    dataset=self.dataset,
+                )
+                self.associate_content_container.children = (
+                    self.associate_widget.content
+                )
+
+                # Discretize management
+
+                self.discretize_widget = discretize_widget.DiscretizeWidget(
+                    ta.get_discretize(self.dataset),
+                    [pb[0] for pb in self.pb_list],
+                    [dis[0] for dis in ta.get_dis(self.dataset)],
+                    dataset=self.dataset,
+                )
+                self.discretize_content_container.children = (
+                    self.discretize_widget.content
+                )
+
+                # Solve management
+                self.solve_list.clear()
+                self.solve_list.extend(ta.get_solved_problems(self.dataset))
+                self.solve_widget = solve_widget.SolveWidget(
+                    self.pb_list, self.solve_list, dataset=self.dataset
+                )
+                self.solve_content_container.children = self.solve_widget.content
+
                 self.ds_callback(self.dataset)
 
     def copy_jdd(self, widget, event, data):
@@ -386,7 +482,7 @@ class HomeWidget:
         pyperclip.copy(s)
 
     def write_data_directory(self, chooser):
-        ta.write_data(self.dataset, "XTESTX", chooser._selected_path)
+        ta.write_data(self.dataset, self.file_name.v_model, chooser._selected_path)
 
     def add_domain(self, widget, event, data):
         new_domain = v.TextField(

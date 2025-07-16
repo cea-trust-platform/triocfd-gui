@@ -195,7 +195,9 @@ class MainApp:
         return nbr
 
     def update_menu_dataset(self, dataset):
-        read_objects = ta.get_read_objects(dataset)
+        read_objects = [pb[0] for pb in ta.get_read_pb(dataset)] + [
+            sch[0] for sch in ta.get_read_sch(dataset)
+        ]
         self.tab_titles = self.tab_titles[:1] + read_objects
         widgets = [
             w.ObjectWidget(dataset.get(i), [dataset.get(i)]) for i in read_objects
