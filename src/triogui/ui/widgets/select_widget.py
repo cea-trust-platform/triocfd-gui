@@ -36,17 +36,23 @@ class SelectWidget:
         self.read_object = read_object
         self.key_path = key_path
         self.change_list = change_list
+        self.initial_type = initial_type
+
+        select_items = [str(i.__name__) for i in ta.get_subclass(initial_type.__name__)]
+
+        if initial_type.model_fields != {}:
+            select_items = [initial_type.__name__] + select_items
 
         # We define the select with a v_model adapted
         if current_object is not None:
             self.select = v.Select(
-                items=[str(i.__name__) for i in ta.get_subclass(initial_type.__name__)],
+                items=select_items,
                 label="Type of the attribute",
                 v_model=type(current_object).__name__,
             )
         else:
             self.select = v.Select(
-                items=[str(i.__name__) for i in ta.get_subclass(initial_type.__name__)],
+                items=select_items,
                 label="Type of the attribute",
                 v_model=None,
             )
@@ -65,6 +71,7 @@ class SelectWidget:
                     self.read_object,
                     self.key_path,
                     self.change_list,
+                    True,
                 )
             ]
 
@@ -73,6 +80,19 @@ class SelectWidget:
 
         # Initial call but skip first time
         self.change_class(None, skip=True)
+
+        selected = self.select.v_model
+        if selected is not None:
+            # Call show_widgets for the type selected (we instantiate the type and specify the tuple (type, is_list))
+            widgets = ObjectWidget.show_widget(
+                ta.trustify_gen_pyd.__dict__[selected](),
+                (ta.trustify_gen_pyd.__dict__[selected], False),
+                self.read_object,
+                self.key_path,
+                self.change_list,
+                True,
+            )
+            self.widget_container.children = [widgets]
 
         self.content = v.Content(children=[self.select, self.widget_container])
 
@@ -94,5 +114,6 @@ class SelectWidget:
                 self.read_object,
                 self.key_path,
                 self.change_list,
+                True,
             )
             self.widget_container.children = [widgets]

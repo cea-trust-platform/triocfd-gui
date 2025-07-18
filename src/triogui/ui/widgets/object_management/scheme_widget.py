@@ -3,7 +3,7 @@ import trioapi as ta
 
 
 class SchemeWidget:
-    def __init__(self, sch_list, sch_callback, dataset):
+    def __init__(self, sch_list, sch_callback, ds_callback, dataset):
         """
         Widget definition to manage list object for the dataset
 
@@ -16,6 +16,7 @@ class SchemeWidget:
 
         self.sch_callback = sch_callback
         self.sch_list = sch_list
+        self.ds_callback = ds_callback
         self.dataset = dataset
 
         self.sch_panels = v.ExpansionPanels(
@@ -23,6 +24,12 @@ class SchemeWidget:
             multiple=True,
             children=[],
         )
+
+        self.sch_with_doc = []
+        for sch in ta.get_subclass("Schema_temps_base"):
+            self.sch_with_doc.append(
+                {"text": f"{sch.__name__} - {sch.__doc__}", "value": sch.__name__}
+            )
 
         self.btn_add_sch = v.Btn(children="Add a scheme")
         self.btn_add_sch.on_event("click", self.add_sch)
@@ -41,12 +48,7 @@ class SchemeWidget:
                 v_model=sch[0],
             )
             new_select_sch = v.Select(
-                items=[
-                    str(i.__name__)
-                    for i in ta.get_subclass(
-                        ta.trustify_gen_pyd.Schema_temps_base.__name__
-                    )
-                ],
+                items=self.sch_with_doc,
                 label="Type of the scheme",
                 v_model=type(sch[1]).__name__,
             )
@@ -116,5 +118,5 @@ class SchemeWidget:
             if self.sch_list[index][0] in self.dataset._declarations:
                 ta.delete_object(self.dataset, self.sch_list[index][0])
             del self.sch_list[index]
-
+            self.ds_callback(self.dataset)
             self.rebuild_panels()

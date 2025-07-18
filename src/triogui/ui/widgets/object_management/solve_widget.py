@@ -13,40 +13,78 @@ class SolveWidget:
             multiple=True,
             children=[],
         )
+        self.btn_add_solve = v.Btn(children="Add a problem to solve")
+        self.btn_add_solve.on_event("click", self.add_solve)
 
         self.rebuild_panels()
 
-        self.solve_container = v.Container(children=[self.solve_panels])
-
+        self.solve_container = v.Container(
+            children=[self.solve_panels, self.btn_add_solve]
+        )
         self.content = [self.solve_container]
 
     def rebuild_panels(self):
         self.solve_panels.children = []
-        for pb in self.pb_list:
-            if None not in pb:
-                switch = v.Switch(
-                    label="Solve this problem", v_model=pb[0] in self.solve_list
-                )
-
-                switch.pb_name = pb[0]
-
-                switch.on_event("change", self.change_solve_dataset)
-
-                new_panel = v.ExpansionPanel(
-                    children=[
-                        v.ExpansionPanelHeader(children=[pb[0]]),
-                        v.ExpansionPanelContent(children=[switch]),
-                    ]
-                )
-                self.solve_panels.children = self.solve_panels.children + [new_panel]
-
-    def change_solve_dataset(self, widget, event, data):
-        new_value = widget.v_model
-        identifier = widget.pb_name
-        if new_value:
-            ta.solve_problem(self.dataset, identifier)
-        else:
-            ta.delete_read_object(
-                self.dataset, ta.trustify_gen_pyd.Solve(pb=identifier)
+        for i, solve_item in enumerate(self.solve_list):
+            text_field = v.TextField(
+                label="Problem to solve",
+                v_model=solve_item if solve_item is not None else "",
+                placeholder="Enter problem name to solve",
             )
-            self.solve_list.remove(identifier)
+
+            btn_delete = v.Btn(
+                children=[v.Icon(children="mdi-delete")],
+                icon=True,
+                color="red",
+                small=True,
+            )
+            btn_delete.on_event(
+                "click", lambda widget, event, data, idx=i: self.delete_solve(idx)
+            )
+
+            header_content = v.Row(
+                children=[
+                    v.Col(children=["Solve Problem"], cols=10),
+                    v.Col(children=[btn_delete], cols=2, class_="text-right"),
+                ],
+                no_gutters=True,
+                align="center",
+            )
+
+            new_panel = v.ExpansionPanel(
+                children=[
+                    v.ExpansionPanelHeader(children=[header_content]),
+                    v.ExpansionPanelContent(children=[text_field]),
+                ]
+            )
+            self.solve_panels.children = self.solve_panels.children + [new_panel]
+
+            text_field.observe(
+                lambda change, idx=i: self.change_solve_dataset(change, idx),
+                "v_model",
+            )
+
+    def change_solve_dataset(self, change, index=None):
+        old_item = self.solve_list[index]
+        new_value = change["new"] if change["new"] != "" else None
+
+        if old_item is not None:
+            ta.delete_read_object(self.dataset, ta.trustify_gen_pyd.Solve(pb=old_item))
+
+        self.solve_list[index] = new_value
+
+        if new_value is not None:
+            ta.solve_problem(self.dataset, new_value)
+
+    def add_solve(self, widget, event, data):
+        self.solve_list.append(None)
+        self.rebuild_panels()
+
+    def delete_solve(self, index):
+        if 0 <= index < len(self.solve_list):
+            if self.solve_list[index] is not None:
+                ta.delete_read_object(
+                    self.dataset, ta.trustify_gen_pyd.Solve(pb=self.solve_list[index])
+                )
+            del self.solve_list[index]
+            self.rebuild_panels()

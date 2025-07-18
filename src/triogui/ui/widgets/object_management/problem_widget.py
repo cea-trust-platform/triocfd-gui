@@ -3,7 +3,7 @@ import trioapi as ta
 
 
 class ProblemWidget:
-    def __init__(self, pb_list, callback, dataset):
+    def __init__(self, pb_list, pb_callback, ds_callback, dataset):
         """
         Widget definition to manage problem object for the dataset
 
@@ -17,9 +17,16 @@ class ProblemWidget:
         This widget is composed by a switch
         """
 
-        self.callback = callback
+        self.pb_callback = pb_callback
         self.pb_list = pb_list
+        self.ds_callback = ds_callback
         self.dataset = dataset
+
+        self.pb_with_doc = []
+        for pb in ta.get_subclass("Pb_base"):
+            self.pb_with_doc.append(
+                {"text": f"{pb.__name__} - {pb.__doc__}", "value": pb.__name__}
+            )
 
         self.pb_panels = v.ExpansionPanels(
             v_model=[],
@@ -44,10 +51,7 @@ class ProblemWidget:
                 v_model=pb[0],
             )
             new_select_pb = v.Select(
-                items=[
-                    str(i.__name__)
-                    for i in ta.get_subclass(ta.trustify_gen_pyd.Pb_base.__name__)
-                ],
+                items=self.pb_with_doc,
                 label="Type of the problem",
                 v_model=type(pb[1]).__name__,
             )
@@ -99,14 +103,14 @@ class ProblemWidget:
             already_created = None not in old_item
             if change["owner"] is name_widget:
                 self.pb_list[index] = [change["new"], old_item[1]]
-                self.callback(index, 0, already_created, old_item[0], self.dataset)
+                self.pb_callback(index, 0, already_created, old_item[0], self.dataset)
             else:
                 if old_item[1] is not None:
                     new_obj = ta.change_type_object(old_item[1], change["new"])
                 else:
                     new_obj = getattr(ta.trustify_gen_pyd, change["new"])()
                 self.pb_list[index] = [old_item[0], new_obj]
-                self.callback(index, 1, already_created, old_item[0], self.dataset)
+                self.pb_callback(index, 1, already_created, old_item[0], self.dataset)
 
     def add_pb(self, widget, event, data):
         self.pb_list.append([None, None])
@@ -117,5 +121,5 @@ class ProblemWidget:
             if self.pb_list[index][0] in self.dataset._declarations:
                 ta.delete_object(self.dataset, self.pb_list[index][0])
             del self.pb_list[index]
-
+            self.ds_callback(self.dataset)
             self.rebuild_panels()

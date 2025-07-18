@@ -19,6 +19,12 @@ class DiscretizationWidget:
         self.dis_list = dis_list
         self.dataset = dataset
 
+        self.dis_with_doc = []
+        for dis in ta.get_subclass("Discretisation_base"):
+            self.dis_with_doc.append(
+                {"text": f"{dis.__name__} - {dis.__doc__}", "value": dis.__name__}
+            )
+
         self.dis_panels = v.ExpansionPanels(
             v_model=[],
             multiple=True,
@@ -43,12 +49,7 @@ class DiscretizationWidget:
                 v_model=dis[0],
             )
             new_select_dis = v.Select(
-                items=[
-                    str(i.__name__)
-                    for i in ta.get_subclass(
-                        ta.trustify_gen_pyd.Discretisation_base.__name__
-                    )
-                ],
+                items=self.dis_with_doc,
                 label="Type of the discretization",
                 v_model=dis[1].__name__ if dis[1] is not None else None,
             )
@@ -63,6 +64,10 @@ class DiscretizationWidget:
                 "click", lambda widget, event, data, idx=i: self.delete_dis(idx)
             )
 
+            # switch = v.Switch(label="Add parameters to this discretization", v_model=False)
+            # switch.index=i
+            # switch.on_event("change", self.change_read_dis)
+            #
             header_content = v.Row(
                 children=[
                     v.Col(children=["Discretization"], cols=10),
@@ -132,3 +137,16 @@ class DiscretizationWidget:
             del self.dis_list[index]
 
             self.rebuild_panels()
+
+    # def change_read_dis(self, widget, event, data):
+    #    new_value = widget.v_model
+    #    identifier = self.dis_list[widget.index][0]
+    #    class_name=self.dis_list[widget.index][1]
+    #    if new_value:
+    #        ta.add_read_object(self.dataset, ta.trustify_gen_pyd.Read(identifier=identifier, obj=class_name()))
+    #        entry_index=ta.get_entry_index(self.dataset,ta.trustify_gen_pyd.Read(identifier=identifier, obj=class_name()))
+    #        self.dataset._declarations[identifier][1]=entry_index
+    #    else:
+    #        ta.delete_read_object(
+    #            self.dataset, self.dataset.get(identifier)
+    #        )

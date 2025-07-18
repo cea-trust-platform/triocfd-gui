@@ -123,5 +123,6 @@ class MeshWidget:
                 self.mesh_list[index],
                 [],
                 [],
+                True,
             )
             expansion_panel_content.children = [select_widget, widgets]

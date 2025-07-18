@@ -26,16 +26,16 @@ class AssociateWidget:
     def rebuild_panels(self):
         self.associate_panels.children = []
         for i, associate in enumerate(self.associate_list):
-            select_1 = v.Select(
-                items=self.global_list,
+            text_field_1 = v.TextField(
                 label="First object to associate",
-                v_model=associate[0],
+                v_model=associate[0] if associate[0] is not None else "",
+                placeholder="Enter first object name",
             )
 
-            select_2 = v.Select(
-                items=self.global_list,
+            text_field_2 = v.TextField(
                 label="Second object to associate",
-                v_model=associate[1],
+                v_model=associate[1] if associate[1] is not None else "",
+                placeholder="Enter second object name",
             )
 
             btn_delete = v.Btn(
@@ -60,29 +60,32 @@ class AssociateWidget:
             new_panel = v.ExpansionPanel(
                 children=[
                     v.ExpansionPanelHeader(children=[header_content]),
-                    v.ExpansionPanelContent(children=[select_1, select_2]),
+                    v.ExpansionPanelContent(children=[text_field_1, text_field_2]),
                 ]
             )
             self.associate_panels.children = self.associate_panels.children + [
                 new_panel
             ]
 
-            select_1.observe(
+            text_field_1.observe(
                 lambda change, idx=i: self.change_associate_dataset(change, idx, 1),
                 "v_model",
             )
 
-            select_2.observe(
+            text_field_2.observe(
                 lambda change, idx=i: self.change_associate_dataset(change, idx, 2),
                 "v_model",
             )
 
-    def change_associate_dataset(self, change, index=None, select_type=None):
+    def change_associate_dataset(self, change, index=None, field_type=None):
         old_item = self.associate_list[index]
-        if select_type == 1:
-            self.associate_list[index] = [change["new"], old_item[1]]
+        new_value = change["new"] if change["new"] != "" else None
+
+        if field_type == 1:
+            self.associate_list[index] = [new_value, old_item[1]]
         else:
-            self.associate_list[index] = [old_item[0], change["new"]]
+            self.associate_list[index] = [old_item[0], new_value]
+
         if None not in old_item:
             entry_index = ta.get_entry_index(
                 self.dataset,

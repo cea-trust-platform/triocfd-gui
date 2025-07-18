@@ -137,13 +137,17 @@ class ObjectWidget:
             ]
         )
 
-        # test button to delete then
-        self.test_button = v.Btn(children=["Test"])
-
-        self.main = [self.test_button, self.layout]
+        self.main = [self.layout]
 
     @staticmethod
-    def show_widget(current_object, expected_type, read_object, key_path, change_list):
+    def show_widget(
+        current_object,
+        expected_type,
+        read_object,
+        key_path,
+        change_list,
+        already_selected=False,
+    ):
         """
         Show recursively the widget adapted to every type
 
@@ -164,6 +168,9 @@ class ObjectWidget:
 
         change_list: list
             List of all states the read object has passed through
+
+        already_selected: Boolean
+            Boolean representing if show_widget is called by a select widget to not call it infinitely with the first condition checked
         """
 
         # If the type of the current object is not a standard one (str, int, etc)
@@ -172,7 +179,10 @@ class ObjectWidget:
             and not expected_type[1]
             and not isinstance(current_object, list)
         ):
-            if expected_type[0].model_fields == {}:
+            if (
+                ta.get_subclass(expected_type[0].__name__) != []
+                and not already_selected
+            ):
                 from .select_widget import SelectWidget
 
                 current_path = key_path
@@ -194,6 +204,29 @@ class ObjectWidget:
                 selectw.select.observe(change_select, "v_model")
                 change_select(None, skip_append=True)
                 return selectw.content
+
+            # if expected_type[0].model_fields == {}:
+            #    from .select_widget import SelectWidget
+            #
+            #    current_path = key_path
+            #    selectw = SelectWidget(
+            #        current_object, expected_type[0], read_object, key_path, change_list
+            #    )
+            #
+            #    def change_select(event, skip_append=False):
+            #        if not skip_append:
+            #            # update the list with a copy
+            #            change_list.insert(-1, copy.deepcopy(read_object))
+            #            # change the read object
+            #            set_nested_attr(
+            #                read_object,
+            #                current_path,
+            #                ta.trustify_gen_pyd.__dict__[selectw.select.v_model](),
+            #            )
+            #
+            #    selectw.select.observe(change_select, "v_model")
+            #    change_select(None, skip_append=True)
+            #    return selectw.content
 
             elif current_object is not None:
                 widget_list = []

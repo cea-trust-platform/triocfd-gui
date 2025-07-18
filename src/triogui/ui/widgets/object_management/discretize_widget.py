@@ -27,16 +27,16 @@ class DiscretizeWidget:
     def rebuild_panels(self):
         self.discretize_panels.children = []
         for i, discretize in enumerate(self.discretize_list):
-            select_1 = v.Select(
-                items=self.pb_list,
+            pb_text_field = v.TextField(
                 label="Problem to discretize",
-                v_model=discretize[0],
+                v_model=discretize[0] if discretize[0] is not None else "",
+                placeholder="Enter problem name",
             )
 
-            select_2 = v.Select(
-                items=self.dis_list,
+            dis_text_field = v.TextField(
                 label="Corresponding scheme",
-                v_model=discretize[1],
+                v_model=discretize[1] if discretize[1] is not None else "",
+                placeholder="Enter discretization scheme",
             )
 
             btn_delete = v.Btn(
@@ -61,29 +61,32 @@ class DiscretizeWidget:
             new_panel = v.ExpansionPanel(
                 children=[
                     v.ExpansionPanelHeader(children=[header_content]),
-                    v.ExpansionPanelContent(children=[select_1, select_2]),
+                    v.ExpansionPanelContent(children=[pb_text_field, dis_text_field]),
                 ]
             )
             self.discretize_panels.children = self.discretize_panels.children + [
                 new_panel
             ]
 
-            select_1.observe(
+            pb_text_field.observe(
                 lambda change, idx=i: self.change_discretize_dataset(change, idx, 1),
                 "v_model",
             )
 
-            select_2.observe(
+            dis_text_field.observe(
                 lambda change, idx=i: self.change_discretize_dataset(change, idx, 2),
                 "v_model",
             )
 
-    def change_discretize_dataset(self, change, index=None, select_type=None):
+    def change_discretize_dataset(self, change, index=None, field_type=None):
         old_item = self.discretize_list[index]
-        if select_type == 1:
-            self.discretize_list[index] = [change["new"], old_item[1]]
+        new_value = change["new"] if change["new"] != "" else None
+
+        if field_type == 1:
+            self.discretize_list[index] = [new_value, old_item[1]]
         else:
-            self.discretize_list[index] = [old_item[0], change["new"]]
+            self.discretize_list[index] = [old_item[0], new_value]
+
         if None not in old_item:
             entry_index = ta.get_entry_index(
                 self.dataset,

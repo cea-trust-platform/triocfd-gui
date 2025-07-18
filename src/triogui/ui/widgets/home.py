@@ -19,6 +19,7 @@ from .object_management import (
     associate_widget,
     discretize_widget,
 )
+from trustify.trust_parser import TRUSTParser, TRUSTStream
 
 
 class HomeWidget:
@@ -42,21 +43,23 @@ class HomeWidget:
         # Get the package directory as a pathlib.Path object
         data_dir = resources.files("trioapi.data")
 
-        self.dataset_list = [
+        self.dataset_list = ["Create from scratch"] + [
             f.stem for f in data_dir.iterdir() if f.is_file() and f.suffix == ".data"
         ]  # Get list fo every datafile in the directory
 
         self.select = v.Select(
             items=self.dataset_list,
             label="Dataset",
-            v_model=None,
+            v_model="Create from scratch",
         )
+        self.select.observe(self.on_select_change, "v_model")
+        self.on_select_change(None)
+
         self.upload = w.FileUpload(
             accept=".data",  # Accept only datafile
             multiple=False,
         )
-        self.select.observe(self.update_widget, "v_model")
-        self.update_widget(None)
+        self.upload.observe(self.on_upload_change, names="value")
 
         self.copy_btn = v.Btn(children=["Copy in clipboard"])
 
@@ -182,7 +185,10 @@ class HomeWidget:
         # ----- PROBLEMS -----
 
         self.pb_widget = problem_widget.ProblemWidget(
-            self.pb_list, callback=self.pb_callback, dataset=self.dataset
+            self.pb_list,
+            pb_callback=self.pb_callback,
+            ds_callback=self.ds_callback,
+            dataset=self.dataset,
         )
         self.pb_content_container = v.Container(children=self.pb_widget.content)
         self.problems_panel = v.ExpansionPanel(
@@ -196,7 +202,10 @@ class HomeWidget:
         # ----- SCHEMES -----
 
         self.sch_widget = scheme_widget.SchemeWidget(
-            self.sch_list, sch_callback=self.sch_callback, dataset=self.dataset
+            self.sch_list,
+            sch_callback=self.sch_callback,
+            ds_callback=self.ds_callback,
+            dataset=self.dataset,
         )
         self.sch_content_container = v.Container(children=self.sch_widget.content)
 
@@ -372,106 +381,119 @@ class HomeWidget:
             )
         ]
 
-    def update_widget(self, change):
+    def on_select_change(self, change):
         if change:
             selected_dataset = change["new"]
-            if selected_dataset:
+            if selected_dataset == "Create from scratch":
+                self.dataset = self.original_dataset
+            else:
                 self.dataset = ta.get_jdd(selected_dataset)
+            self.update_dataset()
 
-                # Dim management
-                self.dim_widget = dimension_widget.DimensionWidget(
-                    ta.get_dimension(self.dataset), self.dataset
-                )
-                self.dim_content_container.children = self.dim_widget.content
+    def on_upload_change(self, inputs):
+        data_ex = self.upload.value[0].content.tobytes().decode("utf-8")
+        tp = TRUSTParser()
+        tp.tokenize(data_ex)
+        stream = TRUSTStream(tp)
+        dataset = ta.trustify_gen.Dataset_Parser.ReadFromTokens(stream)
+        self.dataset = dataset
+        self.update_dataset()
 
-                # Dom management
-                self.dom_widget = domain_widget.DomainWidget(
-                    ta.get_domain(self.dataset), self.dataset
-                )
-                self.domain_content_container.children = self.dom_widget.content
+    def update_dataset(self):
+        # Dim management
+        self.dim_widget = dimension_widget.DimensionWidget(
+            ta.get_dimension(self.dataset), self.dataset
+        )
+        self.dim_content_container.children = self.dim_widget.content
 
-                # Mesh management
-                self.mesh_widget = mesh_widget.MeshWidget(
-                    ta.get_mesh(self.dataset), self.dataset
-                )
-                self.mesh_content_container.children = self.mesh_widget.content
+        # Dom management
+        self.dom_widget = domain_widget.DomainWidget(
+            ta.get_domain(self.dataset), self.dataset
+        )
+        self.domain_content_container.children = self.dom_widget.content
 
-                # Partition
-                self.partition_widget = partition_widget.PartitionWidget(
-                    ta.get_partition(self.dataset), self.dataset
-                )
-                self.partition_content_container.children = (
-                    self.partition_widget.content
-                )
+        # Mesh management
+        self.mesh_widget = mesh_widget.MeshWidget(
+            ta.get_mesh(self.dataset), self.dataset
+        )
+        self.mesh_content_container.children = self.mesh_widget.content
 
-                # Scatter
-                self.scatter_widget = scatter_widget.ScatterWidget(
-                    ta.get_scatter(self.dataset), self.dataset
-                )
-                self.scatter_content_container.children = self.scatter_widget.content
+        # Partition
+        self.partition_widget = partition_widget.PartitionWidget(
+            ta.get_partition(self.dataset), self.dataset
+        )
+        self.partition_content_container.children = self.partition_widget.content
 
-                # Maillage
-                self.mailler_widget = mailler_widget.MaillerWidget(
-                    ta.get_maillage(self.dataset), self.dataset
-                )
-                self.mailler_content_container.children = self.mailler_widget.content
+        # Scatter
+        self.scatter_widget = scatter_widget.ScatterWidget(
+            ta.get_scatter(self.dataset), self.dataset
+        )
+        self.scatter_content_container.children = self.scatter_widget.content
 
-                # Discretization
-                self.dis_widget = discretization_widget.DiscretizationWidget(
-                    ta.get_dis(self.dataset), self.dataset
-                )
-                self.dis_content_container.children = self.dis_widget.content
+        # Maillage
+        self.mailler_widget = mailler_widget.MaillerWidget(
+            ta.get_maillage(self.dataset), self.dataset
+        )
+        self.mailler_content_container.children = self.mailler_widget.content
 
-                # Pb management
-                self.pb_list.clear()
-                self.pb_list.extend(ta.get_read_pb(self.dataset))
-                self.pb_widget = problem_widget.ProblemWidget(
-                    self.pb_list, callback=self.pb_callback, dataset=self.dataset
-                )
-                self.pb_content_container.children = self.pb_widget.content
+        # Discretization
+        self.dis_widget = discretization_widget.DiscretizationWidget(
+            ta.get_dis(self.dataset), self.dataset
+        )
+        self.dis_content_container.children = self.dis_widget.content
 
-                # Sch management
-                self.sch_list.clear()
-                self.sch_list.extend(ta.get_read_sch(self.dataset))
-                self.sch_widget = scheme_widget.SchemeWidget(
-                    self.sch_list, sch_callback=self.sch_callback, dataset=self.dataset
-                )
-                self.sch_content_container.children = self.sch_widget.content
+        # Pb management
+        self.pb_list.clear()
+        self.pb_list.extend(ta.get_read_pb(self.dataset))
+        self.pb_widget = problem_widget.ProblemWidget(
+            self.pb_list,
+            pb_callback=self.pb_callback,
+            ds_callback=self.ds_callback,
+            dataset=self.dataset,
+        )
+        self.pb_content_container.children = self.pb_widget.content
 
-                # Associate management
+        # Sch management
+        self.sch_list.clear()
+        self.sch_list.extend(ta.get_read_sch(self.dataset))
+        self.sch_widget = scheme_widget.SchemeWidget(
+            self.sch_list,
+            sch_callback=self.sch_callback,
+            ds_callback=self.ds_callback,
+            dataset=self.dataset,
+        )
+        self.sch_content_container.children = self.sch_widget.content
 
-                self.associate_widget = associate_widget.AssociateWidget(
-                    [pb[0] for pb in self.pb_list]
-                    + [sch[0] for sch in self.sch_list]
-                    + ta.get_domain(self.dataset),
-                    ta.get_associations(self.dataset),
-                    dataset=self.dataset,
-                )
-                self.associate_content_container.children = (
-                    self.associate_widget.content
-                )
+        # Associate management
 
-                # Discretize management
+        self.associate_widget = associate_widget.AssociateWidget(
+            [pb[0] for pb in self.pb_list]
+            + [sch[0] for sch in self.sch_list]
+            + ta.get_domain(self.dataset),
+            ta.get_associations(self.dataset),
+            dataset=self.dataset,
+        )
+        self.associate_content_container.children = self.associate_widget.content
 
-                self.discretize_widget = discretize_widget.DiscretizeWidget(
-                    ta.get_discretize(self.dataset),
-                    [pb[0] for pb in self.pb_list],
-                    [dis[0] for dis in ta.get_dis(self.dataset)],
-                    dataset=self.dataset,
-                )
-                self.discretize_content_container.children = (
-                    self.discretize_widget.content
-                )
+        # Discretize management
 
-                # Solve management
-                self.solve_list.clear()
-                self.solve_list.extend(ta.get_solved_problems(self.dataset))
-                self.solve_widget = solve_widget.SolveWidget(
-                    self.pb_list, self.solve_list, dataset=self.dataset
-                )
-                self.solve_content_container.children = self.solve_widget.content
+        self.discretize_widget = discretize_widget.DiscretizeWidget(
+            ta.get_discretize(self.dataset),
+            [pb[0] for pb in self.pb_list],
+            [dis[0] for dis in ta.get_dis(self.dataset)],
+            dataset=self.dataset,
+        )
+        self.discretize_content_container.children = self.discretize_widget.content
 
-                self.ds_callback(self.dataset)
+        # Solve management
+        self.solve_list.clear()
+        self.solve_list.extend(ta.get_solved_problems(self.dataset))
+        self.solve_widget = solve_widget.SolveWidget(
+            self.pb_list, self.solve_list, dataset=self.dataset
+        )
+        self.solve_content_container.children = self.solve_widget.content
+
+        self.ds_callback(self.dataset)
 
     def copy_jdd(self, widget, event, data):
         """
