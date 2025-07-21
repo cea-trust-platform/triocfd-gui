@@ -18,6 +18,7 @@ from .object_management import (
     solve_widget,
     associate_widget,
     discretize_widget,
+    coupled_problem_widget,
 )
 from trustify.trust_parser import TRUSTParser, TRUSTStream
 
@@ -258,7 +259,6 @@ class HomeWidget:
         )
 
         # ----- SOLVE -----
-
         self.solve_widget = solve_widget.SolveWidget(
             self.pb_list, self.solve_list, dataset=self.dataset
         )
@@ -269,6 +269,25 @@ class HomeWidget:
                 children=[
                     v.ExpansionPanelHeader(children=["Solves"]),
                     v.ExpansionPanelContent(children=[self.solve_content_container]),
+                ]
+            )
+        )
+
+        # ----- COUPLED PROBLEM -----
+        self.coupled_problem_widget = coupled_problem_widget.CoupledProblemWidget(
+            [], dataset=self.dataset
+        )
+        self.coupled_problem_content_container = v.Container(
+            children=self.coupled_problem_widget.content
+        )
+
+        self.panels.append(
+            v.ExpansionPanel(
+                children=[
+                    v.ExpansionPanelHeader(children=["Coupled problems"]),
+                    v.ExpansionPanelContent(
+                        children=[self.coupled_problem_content_container]
+                    ),
                 ]
             )
         )
@@ -492,6 +511,14 @@ class HomeWidget:
             self.pb_list, self.solve_list, dataset=self.dataset
         )
         self.solve_content_container.children = self.solve_widget.content
+
+        # Coupled problem management
+        self.coupled_problem_widget = coupled_problem_widget.CoupledProblemWidget(
+            ta.get_coupled_problems(self.dataset), dataset=self.dataset
+        )
+        self.coupled_problem_content_container.children = (
+            self.coupled_problem_widget.content
+        )
 
         self.ds_callback(self.dataset)
 

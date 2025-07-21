@@ -59,7 +59,9 @@ class ProblemWidget:
             )
 
             doc_display = v.Alert(
-                children=["Select an element to see its documentation"],
+                children=["Select an element to see its documentation"]
+                if pb[1] is None
+                else [self.doc_dict.get(new_select_pb.v_model)],
                 type="info",
                 outlined=True,
                 class_="text-body-2 pa-2 mt-2",

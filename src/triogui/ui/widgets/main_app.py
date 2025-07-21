@@ -33,8 +33,6 @@ class MainApp:
             sch_list=self.sch_list,
             sch_callback=self.update_menu_sch,
         )
-        self.fw = w.FinalWidget()
-        self.sw = w.StartZeroWidget()
 
         # Now populate the widgets list
         self.tab_widgets = [self.hw]

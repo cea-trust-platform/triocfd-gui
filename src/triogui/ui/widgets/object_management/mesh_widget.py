@@ -67,6 +67,7 @@ class MeshWidget:
 
             if mesh is not None:
                 new_select_type_mesh.v_model = type(mesh).__name__
+                doc_display.children = [self.doc_dict.get(type(mesh).__name__)]
                 panel_content = [
                     new_select_type_mesh,
                     doc_display,

@@ -51,10 +51,11 @@ class SelectWidget:
         if initial_type.model_fields != {}:
             self.element_with_doc = [
                 {
-                    "text": f"{element.__name__} - {element.__doc__}",
-                    "value": element.__name__,
+                    "text": f"{initial_type.__name__} - {initial_type.__doc__}",
+                    "value": initial_type.__name__,
                 }
             ] + self.element_with_doc
+            self.doc_dict[initial_type.__name__] = initial_type.__doc__
 
         # We define the select with a v_model adapted
         self.select = v.Select(
@@ -64,8 +65,11 @@ class SelectWidget:
             if current_object is not None
             else None,
         )
+
         self.doc_display = v.Alert(
-            children=["Select an element to see its documentation"],
+            children=["Select an element to see its documentation"]
+            if current_object is None
+            else [self.doc_dict[type(current_object).__name__]],
             type="info",
             outlined=True,
             class_="text-body-2 pa-2 mt-2",
