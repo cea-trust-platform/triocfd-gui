@@ -23,11 +23,12 @@ class ProblemWidget:
         self.dataset = dataset
 
         self.pb_with_doc = []
+        self.doc_dict = {}
         for pb in ta.get_subclass("Pb_base"):
-            self.pb_with_doc.append(
-                {"text": f"{pb.__name__} - {pb.__doc__}", "value": pb.__name__}
-            )
-
+            pb_name = pb.__name__
+            pb_doc = pb.__doc__
+            self.pb_with_doc.append({"text": f"{pb_name} - {pb_doc}", "value": pb_name})
+            self.doc_dict[pb_name] = pb_doc
         self.pb_panels = v.ExpansionPanels(
             v_model=[],
             multiple=True,
@@ -50,10 +51,19 @@ class ProblemWidget:
                 outlined=True,
                 v_model=pb[0],
             )
+
             new_select_pb = v.Select(
                 items=self.pb_with_doc,
                 label="Type of the problem",
                 v_model=type(pb[1]).__name__,
+            )
+
+            doc_display = v.Alert(
+                children=["Select an element to see its documentation"],
+                type="info",
+                outlined=True,
+                class_="text-body-2 pa-2 mt-2",
+                style_="white-space: pre-wrap;",
             )
 
             btn_delete = v.Btn(
@@ -78,7 +88,9 @@ class ProblemWidget:
             new_panel = v.ExpansionPanel(
                 children=[
                     v.ExpansionPanelHeader(children=[header_content]),
-                    v.ExpansionPanelContent(children=[new_name_pb, new_select_pb]),
+                    v.ExpansionPanelContent(
+                        children=[new_name_pb, new_select_pb, doc_display]
+                    ),
                 ]
             )
 
@@ -96,6 +108,17 @@ class ProblemWidget:
                 ),
                 "v_model",
             )
+            new_select_pb.observe(
+                lambda change, display=doc_display: self.update_doc(change, display),
+                "v_model",
+            )
+
+    def update_doc(self, change, display_widget):
+        """Updates the displayed documentation based on the selection."""
+        if change and change.get("new"):
+            selected_value = change["new"]
+            doc_text = self.doc_dict.get(selected_value)
+            display_widget.children = [doc_text]
 
     def update_menu(self, change, index, name_widget, select_widget):
         if change:

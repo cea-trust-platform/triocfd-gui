@@ -26,10 +26,14 @@ class SchemeWidget:
         )
 
         self.sch_with_doc = []
+        self.doc_dict = {}
         for sch in ta.get_subclass("Schema_temps_base"):
+            sch_name = sch.__name__
+            sch_doc = sch.__doc__
             self.sch_with_doc.append(
-                {"text": f"{sch.__name__} - {sch.__doc__}", "value": sch.__name__}
+                {"text": f"{sch_name} - {sch_doc}", "value": sch_name}
             )
+            self.doc_dict[sch_name] = sch_doc
 
         self.btn_add_sch = v.Btn(children="Add a scheme")
         self.btn_add_sch.on_event("click", self.add_sch)
@@ -51,6 +55,14 @@ class SchemeWidget:
                 items=self.sch_with_doc,
                 label="Type of the scheme",
                 v_model=type(sch[1]).__name__,
+            )
+
+            doc_display = v.Alert(
+                children=["Select an element to see its documentation"],
+                type="info",
+                outlined=True,
+                class_="text-body-2 pa-2 mt-2",
+                style_="white-space: pre-wrap;",
             )
 
             btn_delete = v.Btn(
@@ -75,7 +87,9 @@ class SchemeWidget:
             new_panel = v.ExpansionPanel(
                 children=[
                     v.ExpansionPanelHeader(children=[header_content]),
-                    v.ExpansionPanelContent(children=[new_name_sch, new_select_sch]),
+                    v.ExpansionPanelContent(
+                        children=[new_name_sch, new_select_sch, doc_display]
+                    ),
                 ]
             )
 
@@ -93,6 +107,17 @@ class SchemeWidget:
                 ),
                 "v_model",
             )
+            new_select_sch.observe(
+                lambda change, display=doc_display: self.update_doc(change, display),
+                "v_model",
+            )
+
+    def update_doc(self, change, display_widget):
+        """Updates the displayed documentation based on the selection."""
+        if change and change.get("new"):
+            selected_value = change["new"]
+            doc_text = self.doc_dict.get(selected_value)
+            display_widget.children = [doc_text]
 
     def update_menu(self, change, index, name_widget, select_widget):
         if change:

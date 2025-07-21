@@ -38,24 +38,39 @@ class SelectWidget:
         self.change_list = change_list
         self.initial_type = initial_type
 
-        select_items = [str(i.__name__) for i in ta.get_subclass(initial_type.__name__)]
+        self.element_with_doc = []
+        self.doc_dict = {}
+        for element in ta.get_subclass(initial_type.__name__):
+            element_name = element.__name__
+            element_doc = element.__doc__
+            self.element_with_doc.append(
+                {"text": f"{element_name} - {element_doc}", "value": element_name}
+            )
+            self.doc_dict[element_name] = element_doc
 
         if initial_type.model_fields != {}:
-            select_items = [initial_type.__name__] + select_items
+            self.element_with_doc = [
+                {
+                    "text": f"{element.__name__} - {element.__doc__}",
+                    "value": element.__name__,
+                }
+            ] + self.element_with_doc
 
         # We define the select with a v_model adapted
-        if current_object is not None:
-            self.select = v.Select(
-                items=select_items,
-                label="Type of the attribute",
-                v_model=type(current_object).__name__,
-            )
-        else:
-            self.select = v.Select(
-                items=select_items,
-                label="Type of the attribute",
-                v_model=None,
-            )
+        self.select = v.Select(
+            items=self.element_with_doc,
+            label="Type of the attribute",
+            v_model=type(current_object).__name__
+            if current_object is not None
+            else None,
+        )
+        self.doc_display = v.Alert(
+            children=["Select an element to see its documentation"],
+            type="info",
+            outlined=True,
+            class_="text-body-2 pa-2 mt-2",
+            style_="white-space: pre-wrap;",
+        )
 
         # Container for dynamic widgets
         self.widget_container = v.Container()
@@ -77,7 +92,10 @@ class SelectWidget:
 
         # Content initialization
         self.select.observe(self.change_class, "v_model")
-
+        self.select.observe(
+            lambda change, display=self.doc_display: self.update_doc(change, display),
+            "v_model",
+        )
         # Initial call but skip first time
         self.change_class(None, skip=True)
 
@@ -94,7 +112,16 @@ class SelectWidget:
             )
             self.widget_container.children = [widgets]
 
-        self.content = v.Content(children=[self.select, self.widget_container])
+        self.content = v.Content(
+            children=[self.select, self.doc_display, self.widget_container]
+        )
+
+    def update_doc(self, change, display_widget):
+        """Updates the displayed documentation based on the selection."""
+        if change and change.get("new"):
+            selected_value = change["new"]
+            doc_text = self.doc_dict.get(selected_value)
+            display_widget.children = [doc_text]
 
     def change_class(self, event, skip=False):
         """

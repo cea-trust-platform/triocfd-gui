@@ -20,10 +20,14 @@ class DiscretizationWidget:
         self.dataset = dataset
 
         self.dis_with_doc = []
+        self.doc_dict = {}
         for dis in ta.get_subclass("Discretisation_base"):
+            dis_name = dis.__name__
+            dis_doc = dis.__doc__
             self.dis_with_doc.append(
-                {"text": f"{dis.__name__} - {dis.__doc__}", "value": dis.__name__}
+                {"text": f"{dis_name} - {dis_doc}", "value": dis_name}
             )
+            self.doc_dict[dis_name] = dis_doc
 
         self.dis_panels = v.ExpansionPanels(
             v_model=[],
@@ -54,6 +58,14 @@ class DiscretizationWidget:
                 v_model=dis[1].__name__ if dis[1] is not None else None,
             )
 
+            doc_display = v.Alert(
+                children=["Select an element to see its documentation"],
+                type="info",
+                outlined=True,
+                class_="text-body-2 pa-2 mt-2",
+                style_="white-space: pre-wrap;",
+            )
+
             btn_delete = v.Btn(
                 children=[v.Icon(children="mdi-delete")],
                 icon=True,
@@ -80,7 +92,9 @@ class DiscretizationWidget:
             new_panel = v.ExpansionPanel(
                 children=[
                     v.ExpansionPanelHeader(children=[header_content]),
-                    v.ExpansionPanelContent(children=[new_name_dis, new_select_dis]),
+                    v.ExpansionPanelContent(
+                        children=[new_name_dis, new_select_dis, doc_display]
+                    ),
                 ]
             )
 
@@ -98,6 +112,17 @@ class DiscretizationWidget:
                 ),
                 "v_model",
             )
+            new_select_dis.observe(
+                lambda change, display=doc_display: self.update_doc(change, display),
+                "v_model",
+            )
+
+    def update_doc(self, change, display_widget):
+        """Updates the displayed documentation based on the selection."""
+        if change and change.get("new"):
+            selected_value = change["new"]
+            doc_text = self.doc_dict.get(selected_value)
+            display_widget.children = [doc_text]
 
     def update_dataset(self, change, index, name_widget, select_widget):
         if change:
