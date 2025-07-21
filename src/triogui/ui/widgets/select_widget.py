@@ -103,19 +103,6 @@ class SelectWidget:
         # Initial call but skip first time
         self.change_class(None, skip=True)
 
-        selected = self.select.v_model
-        if selected is not None:
-            # Call show_widgets for the type selected (we instantiate the type and specify the tuple (type, is_list))
-            widgets = ObjectWidget.show_widget(
-                ta.trustify_gen_pyd.__dict__[selected](),
-                (ta.trustify_gen_pyd.__dict__[selected], False),
-                self.read_object,
-                self.key_path,
-                self.change_list,
-                True,
-            )
-            self.widget_container.children = [widgets]
-
         self.content = v.Content(
             children=[self.select, self.doc_display, self.widget_container]
         )
