@@ -80,9 +80,7 @@ class SelectWidget:
         self.widget_container = v.Container()
 
         # If the actual object exists we create a widget with the value for it
-        if self.current_object is not None and initial_type is not type(
-            self.current_object
-        ):
+        if self.current_object is not None:
             self.widget_container.children = [
                 ObjectWidget.show_widget(
                     self.current_object,
