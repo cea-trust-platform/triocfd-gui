@@ -61,7 +61,7 @@ class ObjectWidget:
         self.read_object = read_object
         self.change_list = change_list
         self.panels = []
-
+        self.container = []
         # select widget to change the type of the current object
         # self.select_type = v.Select(
         #    items=[str(i) for i in ta.get_subclass(type(read_object))],
@@ -105,35 +105,82 @@ class ObjectWidget:
                 align="center",
                 no_gutters=True,
             )
-            panel_content = []
-            # Call show_widget for each attributes
-            panel_content.append(
-                ObjectWidget.show_widget(
-                    getattr(read_object, key),
-                    ta.extract_true_type(value),
-                    self.read_object,
-                    [key],
-                    self.change_list,
+
+            # -------------------------------------------------------------------
+            expected_type = ta.extract_true_type(value)
+            if (
+                expected_type[0] in [str, float, bool, int]
+                or get_origin(expected_type[0]) is Literal
+            ):
+                self.container.append(
+                    v.Card(
+                        children=[
+                            v.Row(
+                                children=[
+                                    v.Col(
+                                        children=[header_content],
+                                        cols=3,
+                                        class_="py-1 px-2",
+                                    ),
+                                    v.Col(
+                                        children=[
+                                            ObjectWidget.show_widget(
+                                                getattr(read_object, key),
+                                                ta.extract_true_type(value),
+                                                self.read_object,
+                                                [key],
+                                                self.change_list,
+                                            )
+                                        ],
+                                        cols=9,
+                                        class_="py-1 px-2",
+                                    ),
+                                ],
+                                class_="ma-0",
+                                align="center",
+                                no_gutters=True,
+                            )
+                        ],
+                        class_="ma-1 elevation-1",
+                        flat=True,
+                        outlined=True,
+                    )
                 )
-            )
-            self.panels.append(
-                v.ExpansionPanel(
-                    children=[
-                        v.ExpansionPanelHeader(children=[header_content]),
-                        v.ExpansionPanelContent(children=panel_content),
-                    ]
+            # ------------------------------------------------------------------
+            else:
+                panel_content = []
+                # Call show_widget for each attributes
+                panel_content.append(
+                    ObjectWidget.show_widget(
+                        getattr(read_object, key),
+                        ta.extract_true_type(value),
+                        self.read_object,
+                        [key],
+                        self.change_list,
+                    )
                 )
-            )
+                self.panels.append(
+                    v.ExpansionPanel(
+                        children=[
+                            v.ExpansionPanelHeader(children=[header_content]),
+                            v.ExpansionPanelContent(children=panel_content),
+                        ]
+                    )
+                )
 
         # Button to delete the last change
         self.cancel_button = v.Btn(children=["Cancel your last change"])
 
         # Panel and layout to display everything
-        self.expand_panel = v.ExpansionPanels(children=self.panels)
+        self.expand_panel = v.ExpansionPanels(children=self.panels, multiple=True)
         self.layout = v.Row(
             children=[
                 v.Col(children=[self.cancel_button], cols=1, class_="pa-2"),
-                v.Col(children=[self.expand_panel], cols=11, class_="pa-2"),
+                v.Col(
+                    children=[v.Container(children=self.container), self.expand_panel],
+                    cols=11,
+                    class_="pa-2",
+                ),
             ]
         )
 
@@ -230,6 +277,7 @@ class ObjectWidget:
 
             elif current_object is not None:
                 widget_list = []
+                container = []
                 for key, value in current_object.model_fields.items():
                     tooltip = v.Tooltip(
                         bottom=True,
@@ -270,28 +318,77 @@ class ObjectWidget:
                         no_gutters=True,
                     )
                     # new widgets for each attributes of the current object
-                    widget_list.append(
-                        v.ExpansionPanel(
-                            children=[
-                                v.ExpansionPanelHeader(children=[header_content]),
-                                v.ExpansionPanelContent(
-                                    children=[
-                                        ObjectWidget.show_widget(
-                                            getattr(current_object, key),
-                                            ta.extract_true_type(value),
-                                            read_object,
-                                            key_path + [key],
-                                            change_list,
-                                        )
-                                    ]
-                                ),
-                            ]
+
+                    # -------------------------------------------------------------------
+                    expected_type = ta.extract_true_type(value)
+                    if (
+                        expected_type[0] in [str, float, bool, int]
+                        or get_origin(expected_type[0]) is Literal
+                    ):
+                        container.append(
+                            v.Card(
+                                children=[
+                                    v.Row(
+                                        children=[
+                                            v.Col(
+                                                children=[header_content],
+                                                cols=3,
+                                                class_="py-0 px-1",
+                                            ),
+                                            v.Col(
+                                                children=[
+                                                    ObjectWidget.show_widget(
+                                                        getattr(current_object, key),
+                                                        ta.extract_true_type(value),
+                                                        read_object,
+                                                        key_path + [key],
+                                                        change_list,
+                                                    )
+                                                ],
+                                                cols=9,
+                                                class_="py-0 px-0",
+                                            ),
+                                        ],
+                                        class_="ma-0",
+                                        align="center",
+                                        no_gutters=True,
+                                        style="height: 5px; line-height: 5px; font-size: 5px;",
+                                    )
+                                ],
+                                class_="ma-1 elevation-1",
+                                flat=True,
+                                outlined=True,
+                                style="height: 12px; line-height: 12px; font-size: 8px;",
+                            )
                         )
-                    )
+                    # ------------------------------------------------------------------
+                    else:
+                        widget_list.append(
+                            v.ExpansionPanel(
+                                children=[
+                                    v.ExpansionPanelHeader(children=[header_content]),
+                                    v.ExpansionPanelContent(
+                                        children=[
+                                            ObjectWidget.show_widget(
+                                                getattr(current_object, key),
+                                                ta.extract_true_type(value),
+                                                read_object,
+                                                key_path + [key],
+                                                change_list,
+                                            )
+                                        ]
+                                    ),
+                                ]
+                            )
+                        )
+                # Panel and layout to display everything
+                expand_panel = v.ExpansionPanels(children=widget_list, multiple=True)
 
-                return v.ExpansionPanels(children=widget_list)
+                return v.Container(
+                    children=[v.Container(children=container), expand_panel]
+                )
 
-            # current object has no attributes (it is a parent class) so we create a select widget to choose the inherited class
+                # current object has no attributes (it is a parent class) so we create a select widget to choose the inherited class
 
             else:
                 panel = v.ExpansionPanels(children=[])

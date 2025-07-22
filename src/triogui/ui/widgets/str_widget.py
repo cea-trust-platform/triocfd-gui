@@ -20,7 +20,8 @@ class StrWidget:
             label="Enter a caracter chain",
             v_model=initial_value,
             outlined=True,
-            auto_grow=True,
+            auto_grow=False,
+            style="height: 20px; font-size: 8px;",
         )
 
         self.content = v.Content(children=[self.text_str])

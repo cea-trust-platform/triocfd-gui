@@ -62,13 +62,13 @@ class SelectWidget:
             items=self.element_with_doc,
             label="Type of the attribute",
             v_model=type(current_object).__name__
-            if current_object is not None
+            if current_object is not None or initial_type.model_fields == {}
             else None,
         )
 
         self.doc_display = v.Alert(
             children=["Select an element to see its documentation"]
-            if current_object is None
+            if current_object is None or initial_type.model_fields == {}
             else [self.doc_dict[type(current_object).__name__]],
             type="info",
             outlined=True,
