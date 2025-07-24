@@ -13,20 +13,38 @@ from . import (
 
 
 def set_nested_attr(obj, attr_list, value):
+    """
+    Recursively sets a nested attribute in an object to a given value.
+
+    Parameters
+    ----------
+    obj: object
+        The root object from which the nested attribute access begins.
+
+    attr_list: list
+        A list of attribute names (str) or indices (int) indicating the path to the nested attribute.
+
+    value: any
+        The new value to assign to the final nested attribute.
+    """
     if value is not None:
         for attr in attr_list[:-1]:
             if isinstance(attr, str):
+                # If intermediate attribute is None, instantiate the required object
                 if getattr(obj, attr) is None:
                     info_class = ta.get_successive_attributes(type(obj))[attr]
                     if inspect.isclass(info_class):
                         setattr(obj, attr, info_class())
                     else:
+                        # Handle list or generic container types
                         setattr(
                             obj, attr, get_args(obj.model_fields[attr].annotation)[0]()
                         )
                 obj = getattr(obj, attr)
             elif isinstance(attr, int):
                 obj = obj[attr]
+
+        # Set the final attribute (by name or index)
         if isinstance(attr_list[-1], str):
             setattr(obj, attr_list[-1], value)
         elif isinstance(attr_list[-1], int):
@@ -34,6 +52,24 @@ def set_nested_attr(obj, attr_list, value):
 
 
 def get_nested_attr(obj, attr_list):
+    """
+    Recursively retrieves a nested attribute from an object.
+
+    Follows a list of attribute names or indices to access and return the final nested value.
+
+    Parameters
+    ----------
+    obj: object
+        The root object from which the nested attribute access begins.
+
+    attr_list: list
+        A list of attribute names (str) or indices (int) indicating the path to the nested attribute.
+
+    Returns
+    -------
+    any:
+        The value of the final nested attribute.
+    """
     for attr in attr_list:
         if isinstance(attr, str):
             obj = getattr(obj, attr)
@@ -45,33 +81,29 @@ def get_nested_attr(obj, attr_list):
 class ObjectWidget:
     def __init__(self, read_object, change_list):
         """
-        Widget definition to change objects of the dataset
+        Widget definition to interactively modify objects in the dataset.
 
+        ----------
         Parameters
-        ==========
 
         read_object: Pydantic object
-            The object which will be modified with the widgets
+            The object being modified. Its attributes will be rendered as editable UI fields.
 
-        change_list: List
-            List of all states the read object has passed through
+        change_list: list
+            A list tracking the history of changes made to `read_object`. Each change appends a deep copy.
         """
 
-        # initialization
+        # Store internal state
         self.read_object = read_object
         self.change_list = change_list
-        self.panels = []
-        self.container = []
-        # select widget to change the type of the current object
-        # self.select_type = v.Select(
-        #    items=[str(i) for i in ta.get_subclass(type(read_object))],
-        #    label="Type",
-        #    v_model=None,
-        # )
 
-        # Create recursively every widget using the attributes of the read object and the function show_widget
+        # UI containers
+        self.panels = []  # List of expansion panels (for nested objects)
+        self.container = []  # List of flat UI cards (for basic types)
+
+        # Loop through the fields of the object to build the widget
         for key, value in read_object.model_fields.items():
-            # display description of the field
+            # Create a tooltip showing description and synonyms
             tooltip = v.Tooltip(
                 bottom=True,
                 v_slots=[
@@ -100,14 +132,18 @@ class ObjectWidget:
                     )
                 ],
             )
+
+            # Header for each attribute (field name + info icon)
             header_content = v.Row(
                 children=[v.Html(tag="span", children=[key], class_="mr-2"), tooltip],
                 align="center",
                 no_gutters=True,
             )
 
-            # -------------------------------------------------------------------
+            # Determine expected type (basic type or nested structure)
             expected_type = ta.extract_true_type(value)
+
+            # Handle simple types directly (rendered as cards)
             if (
                 expected_type[0] in [str, float, bool, int]
                 or get_origin(expected_type[0]) is Literal
@@ -126,7 +162,7 @@ class ObjectWidget:
                                         children=[
                                             ObjectWidget.show_widget(
                                                 getattr(read_object, key),
-                                                ta.extract_true_type(value),
+                                                expected_type,
                                                 self.read_object,
                                                 [key],
                                                 self.change_list,
@@ -146,19 +182,18 @@ class ObjectWidget:
                         outlined=True,
                     )
                 )
-            # ------------------------------------------------------------------
+
+            # Handle nested types using expansion panels
             else:
-                panel_content = []
-                # Call show_widget for each attributes
-                panel_content.append(
+                panel_content = [
                     ObjectWidget.show_widget(
                         getattr(read_object, key),
-                        ta.extract_true_type(value),
+                        expected_type,
                         self.read_object,
                         [key],
                         self.change_list,
                     )
-                )
+                ]
                 self.panels.append(
                     v.ExpansionPanel(
                         children=[
@@ -168,10 +203,10 @@ class ObjectWidget:
                     )
                 )
 
-        # Button to delete the last change
+        # Cancel button to revert the last modification
         self.cancel_button = v.Btn(children=["Cancel your last change"])
 
-        # Panel and layout to display everything
+        # Final layout with editable fields and collapsible panels
         self.expand_panel = v.ExpansionPanels(children=self.panels, multiple=True)
         self.layout = v.Row(
             children=[
@@ -184,6 +219,7 @@ class ObjectWidget:
             ]
         )
 
+        # Store root layout
         self.main = [self.layout]
 
     @staticmethod
@@ -196,36 +232,40 @@ class ObjectWidget:
         already_selected=False,
     ):
         """
-        Show recursively the widget adapted to every type
+        Recursively build the appropriate UI widget for any object type.
+
+        This method dynamically generates input widgets for simple types (str, int, bool, etc.),
+        expansion panels for nested objects, and custom widgets for lists and Literal types.
+        It updates the `read_object` and appends changes to `change_list`.
 
         Parameters
-        ==========
+        ----------
+        current_object : any
+            The current value of the object being rendered.
 
-        current object: Object
-            The current object for which the widget is created
+        expected_type : tuple
+            A tuple with the true type of the object and a boolean indicating if it represents a list.
 
-        expected_type: tuple
-            Tuple representing the type of the current object and a boolean to know if it is representing a list or not
+        read_object : object
+            The top-level object being edited.
 
-        read_object: Object
-            The initial object modified
+        key_path : list
+            A list of attribute names/indexes tracing the path from the top-level object to the current one.
 
-        key_path: list
-            List representing the path of the current object from the initial read object
+        change_list : list
+            A list storing all previous states of the object to allow undoing changes.
 
-        change_list: list
-            List of all states the read object has passed through
-
-        already_selected: Boolean
-            Boolean representing if show_widget is called by a select widget to not call it infinitely with the first condition checked
+        already_selected : bool, optional
+            Used to avoid infinite recursion when rendering polymorphic types via dropdowns.
         """
 
-        # If the type of the current object is not a standard one (str, int, etc)
+        # Handle nested Pydantic objects (not lists)
         if (
             hasattr(expected_type[0], "model_fields")
             and not expected_type[1]
             and not isinstance(current_object, list)
         ):
+            # If polymorphic object (multiple subclasses), render a selector widget
             if (
                 ta.get_subclass(expected_type[0].__name__) != []
                 and not already_selected
@@ -237,48 +277,29 @@ class ObjectWidget:
                     current_object, expected_type[0], read_object, key_path, change_list
                 )
 
+                # Callback when dropdown selection changes
                 def change_select(event, skip_append=False):
                     if not skip_append:
-                        # update the list with a copy
                         change_list.insert(-1, copy.deepcopy(read_object))
-                        # change the read object
                         set_nested_attr(
                             read_object,
                             current_path,
                             ta.trustify_gen_pyd.__dict__[selectw.select.v_model](),
                         )
 
+                # Observe value changes and initialize selection
                 selectw.select.observe(change_select, "v_model")
                 change_select(None, skip_append=True)
                 return selectw.content
 
-            # if expected_type[0].model_fields == {}:
-            #    from .select_widget import SelectWidget
-            #
-            #    current_path = key_path
-            #    selectw = SelectWidget(
-            #        current_object, expected_type[0], read_object, key_path, change_list
-            #    )
-            #
-            #    def change_select(event, skip_append=False):
-            #        if not skip_append:
-            #            # update the list with a copy
-            #            change_list.insert(-1, copy.deepcopy(read_object))
-            #            # change the read object
-            #            set_nested_attr(
-            #                read_object,
-            #                current_path,
-            #                ta.trustify_gen_pyd.__dict__[selectw.select.v_model](),
-            #            )
-            #
-            #    selectw.select.observe(change_select, "v_model")
-            #    change_select(None, skip_append=True)
-            #    return selectw.content
-
+            # If the object is already initialized, render widgets for its fields
             elif current_object is not None:
                 widget_list = []
                 container = []
+
+                # Loop through each attribute in the object
                 for key, value in current_object.model_fields.items():
+                    # Build a tooltip for help info
                     tooltip = v.Tooltip(
                         bottom=True,
                         v_slots=[
@@ -309,6 +330,7 @@ class ObjectWidget:
                             ),
                         ],
                     )
+
                     header_content = v.Row(
                         children=[
                             v.Html(tag="span", children=[key], class_="mr-2"),
@@ -317,10 +339,10 @@ class ObjectWidget:
                         align="center",
                         no_gutters=True,
                     )
-                    # new widgets for each attributes of the current object
 
-                    # -------------------------------------------------------------------
                     expected_type = ta.extract_true_type(value)
+
+                    # If simple type, create inline card
                     if (
                         expected_type[0] in [str, float, bool, int]
                         or get_origin(expected_type[0]) is Literal
@@ -339,7 +361,7 @@ class ObjectWidget:
                                                 children=[
                                                     ObjectWidget.show_widget(
                                                         getattr(current_object, key),
-                                                        ta.extract_true_type(value),
+                                                        expected_type,
                                                         read_object,
                                                         key_path + [key],
                                                         change_list,
@@ -361,7 +383,8 @@ class ObjectWidget:
                                 style="height: 12px; line-height: 12px; font-size: 8px;",
                             )
                         )
-                    # ------------------------------------------------------------------
+
+                    # Otherwise, create expansion panel for nested attributes
                     else:
                         widget_list.append(
                             v.ExpansionPanel(
@@ -371,7 +394,7 @@ class ObjectWidget:
                                         children=[
                                             ObjectWidget.show_widget(
                                                 getattr(current_object, key),
-                                                ta.extract_true_type(value),
+                                                expected_type,
                                                 read_object,
                                                 key_path + [key],
                                                 change_list,
@@ -381,15 +404,13 @@ class ObjectWidget:
                                 ]
                             )
                         )
-                # Panel and layout to display everything
-                expand_panel = v.ExpansionPanels(children=widget_list, multiple=True)
 
+                expand_panel = v.ExpansionPanels(children=widget_list, multiple=True)
                 return v.Container(
                     children=[v.Container(children=container), expand_panel]
                 )
 
-                # current object has no attributes (it is a parent class) so we create a select widget to choose the inherited class
-
+            # If the object is None and has no subclasses, offer to initialize
             else:
                 panel = v.ExpansionPanels(children=[])
                 initialize = v.Btn(
@@ -398,9 +419,9 @@ class ObjectWidget:
                 )
 
                 def initialize_object(widget, event, data):
-                    widget_list = []
-                    # Initialize an object of the expected type to be able to modify it
                     new_object = expected_type[0]()
+                    widget_list = []
+
                     for key, value in new_object.model_fields.items():
                         tooltip = v.Tooltip(
                             bottom=True,
@@ -432,6 +453,7 @@ class ObjectWidget:
                                 ),
                             ],
                         )
+
                         header_content = v.Row(
                             children=[
                                 v.Html(tag="span", children=[key], class_="mr-2"),
@@ -440,7 +462,7 @@ class ObjectWidget:
                             align="center",
                             no_gutters=True,
                         )
-                        # new widget list for the new object representing the expected type
+
                         widget_list.append(
                             v.ExpansionPanel(
                                 children=[
@@ -459,34 +481,35 @@ class ObjectWidget:
                                 ]
                             )
                         )
+
                     panel.children = widget_list
                     change_list.insert(-1, copy.deepcopy(read_object))
                     set_nested_attr(read_object, key_path, new_object)
 
                 panel.children = [initialize]
                 initialize.on_event("click", initialize_object)
-
                 return v.Container(children=[panel])
 
+        # If the field is a list (expected_type[1] is True) or an actual list instance
         elif (
             expected_type[1] or isinstance(current_object, list)
         ) and current_object is not None:
             from .list_widget import ListWidget
 
             current_path = key_path
+
+            # Create a custom widget for list handling
             listw = ListWidget(
                 current_object, expected_type[0], read_object, key_path, change_list
             )
 
+            # Callback to delete an item from the list
             def delete_list(widget, event, data):
-                # Code to get the updated object in the global object which is the only one modified
                 updated_object = get_nested_attr(read_object, key_path)
-
                 index = widget.kwargs["index"]
                 updated_object.pop(index)
 
                 set_nested_attr(read_object, key_path, updated_object)
-
                 change_list.insert(-1, copy.deepcopy(read_object))
 
                 listw.build_panels(updated_object)
@@ -495,32 +518,25 @@ class ObjectWidget:
                 for btn in listw.duplicate_buttons:
                     btn.on_event("click", duplicate_list)
 
+            # Callback to add a new (empty) item to the list
             def add_list(widget, event, data):
-                # Code to get the updated object in the global object which is the only one modified
                 updated_object = get_nested_attr(read_object, key_path)
-
                 updated_object.append(copy.deepcopy(expected_type[0]()))
-
                 set_nested_attr(read_object, key_path, updated_object)
-
                 change_list.insert(-1, copy.deepcopy(read_object))
 
                 listw.build_panels(updated_object)
-
                 for btn in listw.delete_buttons:
                     btn.on_event("click", delete_list)
                 for btn in listw.duplicate_buttons:
                     btn.on_event("click", duplicate_list)
 
+            # Callback to duplicate an item in the list
             def duplicate_list(widget, event, data):
-                # Code to get the updated object in the global object which is the only one modified
                 updated_object = get_nested_attr(read_object, key_path)
-
                 index = widget.kwargs["index"]
                 updated_object.append(copy.deepcopy(updated_object[index]))
-
                 set_nested_attr(read_object, key_path, updated_object)
-
                 change_list.insert(-1, copy.deepcopy(read_object))
 
                 listw.build_panels(updated_object)
@@ -529,9 +545,9 @@ class ObjectWidget:
                 for btn in listw.duplicate_buttons:
                     btn.on_event("click", duplicate_list)
 
+            # Register events on buttons
             for i in listw.delete_buttons:
                 i.on_event("click", delete_list)
-
             for i in listw.duplicate_buttons:
                 i.on_event("click", duplicate_list)
 
@@ -539,7 +555,7 @@ class ObjectWidget:
 
             return listw.content
 
-        # For each type that has no attributes, check its type, create the corresponding widget using its class, and update both the read object and the change list
+        # Handle primitive types (non-nested attributes)
         elif expected_type[0] is str:
             strw = str_widget.StrWidget(current_object)
 
@@ -598,6 +614,7 @@ class ObjectWidget:
             intw.number_input.on_event("blur", change_int)
             return intw.content
 
+        # If the list is uninitialized (None), offer an "Initialize" button
         elif current_object is None and expected_type[1]:
             container = v.Container(children=[])
             initialize = v.Btn(
@@ -606,7 +623,6 @@ class ObjectWidget:
             )
 
             def initialize_object(widget, event, data):
-                # Initialize an object of the expected type to be able to modify it
                 new_object = expected_type[0]()
                 widget = ObjectWidget.show_widget(
                     [new_object],
@@ -625,5 +641,6 @@ class ObjectWidget:
 
             return container
 
+        # Catch-all for unknown or unhandled types
         else:
             return f"{current_object} [[]]{expected_type}"
