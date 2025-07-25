@@ -1,7 +1,7 @@
 import ipyvuetify as v
 import trioapi as ta
 import inspect
-from typing import get_origin, get_args, Literal
+from typing import get_origin, get_args, Literal, Union
 import copy
 from . import (
     str_widget,
@@ -101,6 +101,40 @@ class ObjectWidget:
         self.panels = []  # List of expansion panels (for nested objects)
         self.container = []  # List of flat UI cards (for basic types)
 
+        # Tooltip for optional fields
+        self.optional_tooltip = v.Tooltip(
+            bottom=True,
+            v_slots=[
+                {
+                    "name": "activator",
+                    "variable": "tooltip",
+                    "children": v.Icon(
+                        children=["mdi-minus-circle-outline"],
+                        color="green",
+                        v_on="tooltip.on",
+                    ),
+                }
+            ],
+            children=["This field is optional"],
+        )
+
+        # Tooltip for required field
+        self.required_tooltip = v.Tooltip(
+            bottom=True,
+            v_slots=[
+                {
+                    "name": "activator",
+                    "variable": "tooltip",
+                    "children": v.Icon(
+                        children=["mdi-alert-circle-outline"],
+                        color="orange",
+                        v_on="tooltip.on",
+                    ),
+                }
+            ],
+            children=["This field is required"],
+        )
+
         # Loop through the fields of the object to build the widget
         for key, value in read_object.model_fields.items():
             # Create a tooltip showing description and synonyms
@@ -148,6 +182,15 @@ class ObjectWidget:
                 expected_type[0] in [str, float, bool, int]
                 or get_origin(expected_type[0]) is Literal
             ):
+                # Verify if the attribute is declared with an Optional
+                if get_origin(value.annotation) is Union:
+                    header_content.children = header_content.children + [
+                        self.optional_tooltip
+                    ]
+                else:
+                    header_content.children = header_content.children + [
+                        self.required_tooltip
+                    ]
                 self.container.append(
                     v.Card(
                         children=[
@@ -331,6 +374,40 @@ class ObjectWidget:
                         ],
                     )
 
+                    # Tooltip for optional fields
+                    optional_tooltip = v.Tooltip(
+                        bottom=True,
+                        v_slots=[
+                            {
+                                "name": "activator",
+                                "variable": "tooltip",
+                                "children": v.Icon(
+                                    children=["mdi-minus-circle-outline"],
+                                    color="green",
+                                    v_on="tooltip.on",
+                                ),
+                            }
+                        ],
+                        children=["This field is optional"],
+                    )
+
+                    # Tooltip for required field
+                    required_tooltip = v.Tooltip(
+                        bottom=True,
+                        v_slots=[
+                            {
+                                "name": "activator",
+                                "variable": "tooltip",
+                                "children": v.Icon(
+                                    children=["mdi-alert-circle-outline"],
+                                    color="orange",
+                                    v_on="tooltip.on",
+                                ),
+                            }
+                        ],
+                        children=["This field is required"],
+                    )
+
                     header_content = v.Row(
                         children=[
                             v.Html(tag="span", children=[key], class_="mr-2"),
@@ -347,6 +424,16 @@ class ObjectWidget:
                         expected_type[0] in [str, float, bool, int]
                         or get_origin(expected_type[0]) is Literal
                     ):
+                        # Verify if the attribute is declared with an Optional
+                        if get_origin(value.annotation) is Union:
+                            header_content.children = header_content.children + [
+                                optional_tooltip
+                            ]
+                        else:
+                            header_content.children = header_content.children + [
+                                required_tooltip
+                            ]
+
                         container.append(
                             v.Card(
                                 children=[
