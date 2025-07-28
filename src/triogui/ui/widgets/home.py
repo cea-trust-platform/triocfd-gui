@@ -18,6 +18,7 @@ from .object_management import (
     associate_widget,
     discretize_widget,
     coupled_problem_widget,
+    ecriture_lecture_special_widget,
 )
 from trustify.trust_parser import TRUSTParser, TRUSTStream
 
@@ -305,6 +306,30 @@ class HomeWidget:
             )
         )
 
+        # Ecriture lecture special panel
+        self.ecriture_lecture_special_widget = (
+            ecriture_lecture_special_widget.EcritureLectureSpecialWidget(
+                dataset=self.dataset
+            )
+        )
+        self.ecriture_lecture_special_container = v.Container(
+            children=self.ecriture_lecture_special_widget.content
+        )
+        self.panels.append(
+            v.ExpansionPanel(
+                children=[
+                    v.ExpansionPanelHeader(
+                        children=[
+                            "Choose to write or not to write a .xyz file on the disk at the end of the calculation. (Ecriturelecturespecial keyword)"
+                        ]
+                    ),
+                    v.ExpansionPanelContent(
+                        children=[self.ecriture_lecture_special_container]
+                    ),
+                ]
+            )
+        )
+
         # Main layout container, grouping all the UI elements
         self.main = [
             v.Container(
@@ -544,6 +569,16 @@ class HomeWidget:
         )
         self.coupled_problem_content_container.children = (
             self.coupled_problem_widget.content
+        )
+
+        # EcritureLectureSpecial object management (to manage if xyz file is written or not)
+        self.ecriture_lecture_special_widget = (
+            ecriture_lecture_special_widget.EcritureLectureSpecialWidget(
+                dataset=self.dataset
+            )
+        )
+        self.ecriture_lecture_special_container.children = (
+            self.ecriture_lecture_special_widget.content
         )
 
         # Notify parent component of the dataset change

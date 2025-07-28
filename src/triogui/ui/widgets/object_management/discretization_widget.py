@@ -212,3 +212,5 @@ class DiscretizationWidget:
                 ta.delete_declaration_object(self.dataset, self.dis_list[index][0])
             del self.dis_list[index]
             self.rebuild_panels()
+
+    # def add_read_dis(self, index):
