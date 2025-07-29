@@ -1,5 +1,6 @@
 import ipyvuetify as v
 import trioapi as ta
+from ..object import ObjectWidget
 
 
 class DiscretizationWidget:
@@ -110,31 +111,48 @@ class DiscretizationWidget:
                 align="center",
             )
 
+            # Container for dynamic content (initially empty)
+            dynamic_content = v.Container(children=[])
+
+            content_children = [
+                new_name_dis,
+                new_select_dis,
+                doc_display,
+                dynamic_content,
+            ]
+
             # Compose the panel with header and content
             new_panel = v.ExpansionPanel(
                 children=[
                     v.ExpansionPanelHeader(children=[header_content]),
-                    v.ExpansionPanelContent(
-                        children=[new_name_dis, new_select_dis, doc_display]
-                    ),
+                    v.ExpansionPanelContent(children=content_children),
                 ]
             )
+
+            # Verify to update the content if the dis is Vef
+            self.update_widget_for_vef(i, dynamic_content)
 
             # Add the panel to the UI
             self.dis_panels.children = self.dis_panels.children + [new_panel]
 
             # Observe changes to name field and update dataset
             new_name_dis.observe(
-                lambda change, idx=i, name=new_name_dis: self.update_dataset(
-                    change, idx, name, new_select_dis
+                lambda change,
+                idx=i,
+                name=new_name_dis,
+                content=dynamic_content: self.update_dataset(
+                    change, idx, name, new_select_dis, content
                 ),
                 "v_model",
             )
 
             # Observe changes to type dropdown and update dataset
             new_select_dis.observe(
-                lambda change, idx=i, select=new_select_dis: self.update_dataset(
-                    change, idx, new_name_dis, select
+                lambda change,
+                idx=i,
+                select=new_select_dis,
+                content=dynamic_content: self.update_dataset(
+                    change, idx, new_name_dis, select, content
                 ),
                 "v_model",
             )
@@ -154,7 +172,9 @@ class DiscretizationWidget:
             doc_text = self.doc_dict.get(selected_value)
             display_widget.children = [doc_text]
 
-    def update_dataset(self, change, index, name_widget, select_widget):
+    def update_dataset(
+        self, change, index, name_widget, select_widget, widget_container
+    ):
         """
         Update the dataset when a name or type field is changed.
 
@@ -170,17 +190,35 @@ class DiscretizationWidget:
                 if change["owner"] is name_widget:
                     # Update identifier
                     self.dis_list[index] = [change["new"], old_item[1]]
-                    ta.change_declaration_object(
-                        self.dataset, old_item[0], "identifier", self.dis_list[index][0]
-                    )
+                    # We use the appropriate function if the dis is used with the read keyword or not
+                    if self.dataset._declarations[old_item[0]][1] == -1:
+                        ta.change_declaration_object(
+                            self.dataset,
+                            old_item[0],
+                            "identifier",
+                            self.dis_list[index][0],
+                        )
+                    else:
+                        ta.change_read_object(
+                            self.dataset,
+                            old_item[0],
+                            "identifier",
+                            self.dis_list[index][0],
+                        )
                 else:
                     # Update type
                     new_type = getattr(ta.trustify_gen_pyd, change["new"])
                     self.dis_list[index] = [old_item[0], new_type]
+                    # This if means that the old type was Vef (only dis with read keyword)
+                    if self.dataset._declarations[old_item[0]][1] > 0:
+                        entry_index = self.dataset._declarations[old_item[0]][1]
+                        # Delete in the dataset entries
+                        del self.dataset.entries[entry_index]
+                        self.dataset._declarations[old_item[0]][1] = -1
+                    # Change for the declaration
                     ta.change_declaration_object(
                         self.dataset, old_item[0], "ze_type", self.dis_list[index][1]
                     )
-
             # If it's a new entry, fill in values and add to dataset if complete
             else:
                 if change["owner"] is name_widget:
@@ -195,10 +233,45 @@ class DiscretizationWidget:
                         self.dis_list[index][1](),  # Instantiate the type
                         self.dis_list[index][0],
                     )
+            # Keep the widget for vef updated
+            self.update_widget_for_vef(index, widget_container)
+
+    def update_widget_for_vef(self, index, widget_container):
+        """
+        Creates a widget specially for the Vef discretization to let the user modifies it if he wants to.
+        It is the only discretization with the keyword read available
+        """
+        # Empty the container
+        widget_container.children = []
+        if (
+            self.dis_list[index][0] is not None
+            and self.dis_list[index][1] == ta.trustify_gen_pyd.Vef
+        ):
+            # Choose to change the discretization or not
+            switch = v.Switch(
+                label="Modify this discretization using the Read keyword ?",
+                v_model=self.dataset._declarations[self.dis_list[index][0]][1] > 0,
+            )
+            switch.observe(
+                lambda change: self.update_read_dis(change, index, widget_container),
+                "v_model",
+            )
+            widget_container.children = widget_container.children + [switch]
+            # Create the widget if it is already modified in the dataset
+            if self.dataset._declarations[self.dis_list[index][0]][1] > 0:
+                widget = ObjectWidget.show_widget(
+                    self.dataset.get(self.dis_list[index][0]),
+                    (self.dis_list[index][1], False),
+                    self.dataset.get(self.dis_list[index][0]),
+                    [],
+                    [],
+                    True,
+                )
+                widget_container.children = widget_container.children + [widget]
 
     def add_dis(self, widget, event, data):
         """
-        Add a new empty discretization to the list and refresh the UI.
+        Add a new empty discretization to the list kand refresh the UI.
         """
         self.dis_list.append([None, None])
         self.rebuild_panels()
@@ -209,8 +282,30 @@ class DiscretizationWidget:
         """
         if 0 <= index < len(self.dis_list):
             if self.dis_list[index][0] in self.dataset._declarations:
-                ta.delete_declaration_object(self.dataset, self.dis_list[index][0])
+                # Use the appropriate function depending on if it uses the keyword read or not
+                if self.dataset._declarations[self.dis_list[index][0]][1] > 0:
+                    ta.delete_object(self.dataset, self.dis_list[index][0])
+                else:
+                    ta.delete_declaration_object(self.dataset, self.dis_list[index][0])
             del self.dis_list[index]
             self.rebuild_panels()
 
-    # def add_read_dis(self, index):
+    def update_read_dis(self, change, index, widget_container):
+        """
+        Update the database by creating or deleting the Read keyword according to the switch changes.
+        """
+        if change["new"]:
+            # Write the Read keyword and change in the dataset _declarations
+            read_dis = ta.trustify_gen_pyd.Read(
+                identifier=self.dis_list[index][0], obj=self.dis_list[index][1]()
+            )
+            ta.add_read_object(self.dataset, read_dis)
+            entry_index = ta.get_entry_index(self.dataset, read_dis)
+            self.dataset._declarations[self.dis_list[index][0]][1] = entry_index
+        else:
+            # Delete the Read keyword
+            entry_index = self.dataset._declarations[self.dis_list[index][0]][1]
+            del self.dataset.entries[entry_index]
+            self.dataset._declarations[self.dis_list[index][0]][1] = -1
+        # Keep the widget updated
+        self.update_widget_for_vef(index, widget_container)

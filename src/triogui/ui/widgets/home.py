@@ -50,7 +50,6 @@ class HomeWidget:
         including dimensions, domains, meshes, partitions, scatters, maillers,
         discretizations, problems, schemes, associations, discretization, and solving.
         """
-
         # Store callbacks and lists
         self.ds_callback = ds_callback
         self.pb_callback = pb_callback
