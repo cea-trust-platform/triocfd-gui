@@ -101,7 +101,6 @@ class HomeWidget:
             dense=True,
             hide_details=True,
             single_line=True,
-            style_="max-width: 250px;",
             class_="mb-2",
         )
 
@@ -329,6 +328,10 @@ class HomeWidget:
             )
         )
 
+        filefield_container = v.Container(
+            children=[self.filefield], style_="max-width: 100%; overflow-x: auto;"
+        )
+
         # Main layout container, grouping all the UI elements
         self.main = [
             v.Container(
@@ -413,7 +416,7 @@ class HomeWidget:
                                                 class_="text-subtitle-1 font-weight-medium mb-2",
                                             ),
                                             self.file_name,
-                                            self.filefield,
+                                            filefield_container,
                                         ],
                                     ),
                                     v.Col(
