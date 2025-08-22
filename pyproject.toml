@@ -17,5 +17,14 @@ dependencies = [
     "voila>=0.5.8",
 ]
 
+[project.gui-scripts]
+triogui = "triogui.ui.voila_main:voila"
+
 [tool.uv.sources]
-trioapi = { path = "../trioapi" }
+trioapi = { path = "../triocfd-api" }
+
+[dependency-groups]
+dev = [
+    "jupyter>=1.1.1",
+    "jupyterlab>=4.4.2",
+]

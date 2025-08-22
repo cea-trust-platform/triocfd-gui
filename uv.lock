@@ -1458,8 +1458,8 @@ wheels = [
 
 [[package]]
 name = "trioapi"
-version = "0.2.19"
-source = { directory = "../trioapi" }
+version = "0.2.18"
+source = { directory = "../triocfd-api" }
 dependencies = [
     { name = "numpy" },
     { name = "pydantic" },
@@ -1476,6 +1476,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "jupyter-sphinx", specifier = ">=0.5.3" },
+    { name = "jupyterlab", specifier = ">=4.4.4" },
     { name = "marimo", specifier = ">=0.11.26" },
     { name = "matplotlib", specifier = ">=3.10.1" },
     { name = "nbsphinx", specifier = ">=0.9.6" },
@@ -1497,14 +1498,26 @@ dependencies = [
     { name = "voila" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "jupyter" },
+    { name = "jupyterlab" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "ipyfilechooser", specifier = ">=0.6.0" },
     { name = "ipyvuetify", specifier = ">=1.11.1" },
     { name = "jupyter", specifier = ">=1.1.1" },
     { name = "pyperclip", specifier = ">=1.9.0" },
-    { name = "trioapi", directory = "../trioapi" },
+    { name = "trioapi", directory = "../triocfd-api" },
     { name = "voila", specifier = ">=0.5.8" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "jupyter", specifier = ">=1.1.1" },
+    { name = "jupyterlab", specifier = ">=4.4.2" },
 ]
 
 [[package]]
