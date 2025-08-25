@@ -90,7 +90,9 @@ class MeshWidget:
                 panel_content = [
                     new_select_type_mesh,
                     doc_display,
-                    ObjectWidget.show_widget(mesh, (type(mesh), False), mesh, [], []),
+                    ObjectWidget.show_widget(
+                        mesh, (type(mesh), False), mesh, [], [], True
+                    ),
                 ]
             else:
                 panel_content = [new_select_type_mesh, doc_display]
